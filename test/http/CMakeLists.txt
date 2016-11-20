@@ -12,15 +12,14 @@ add_executable (http-tests
     ../../extras/beast/unit_test/main.cpp
     basic_dynabuf_body.cpp
     basic_fields.cpp
-    basic_parser_v1.cpp
+    basic_parser.cpp
     concepts.cpp
     empty_body.cpp
+    error.cpp
     fields.cpp
-    header_parser_v1.cpp
     message.cpp
     parse.cpp
-    parse_error.cpp
-    parser_v1.cpp
+    parser.cpp
     read.cpp
     reason.cpp
     resume_context.cpp

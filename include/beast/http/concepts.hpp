@@ -5,10 +5,11 @@
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 //
 
-#ifndef BEAST_HTTP_TYPE_CHECK_HPP
-#define BEAST_HTTP_TYPE_CHECK_HPP
+#ifndef BEAST_HTTP_CONCEPTS_HPP
+#define BEAST_HTTP_CONCEPTS_HPP
 
 #include <beast/core/error.hpp>
+#include <beast/core/detail/buffer_concepts.hpp>
 #include <beast/core/detail/type_traits.hpp>
 #include <beast/http/resume_context.hpp>
 #include <boost/asio/buffer.hpp>
@@ -127,7 +128,7 @@ class is_Parser
 {
     template<class U, class R =
         std::is_convertible<decltype(
-            std::declval<U>().complete()),
+            std::declval<U>().need_more()),
             bool>>
     static R check1(int);
     template<class>
@@ -137,7 +138,7 @@ class is_Parser
     template<class U, class R =
         std::is_convertible<decltype(
             std::declval<U>().write(
-                std::declval<boost::asio::const_buffers_1 const&>(),
+                std::declval<beast::detail::ConstBufferSequence const&>(),
                 std::declval<error_code&>())),
             std::size_t>>
     static R check2(int);

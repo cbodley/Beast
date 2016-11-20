@@ -1,5 +1,9 @@
 * Add flat_streambuf
 
+API Changes
+
+* Refactor HTTP read, parse, and parser interfaces
+
 --------------------------------------------------------------------------------
 
 1.0.0-b29

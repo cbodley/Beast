@@ -11,6 +11,7 @@
 #include "fail_parser.hpp"
 
 #include <beast/http/fields.hpp>
+#include <beast/http/parser.hpp>
 #include <beast/http/streambuf_body.hpp>
 #include <beast/test/fail_stream.hpp>
 #include <beast/test/string_istream.hpp>
@@ -157,7 +158,8 @@ public:
                 sb.prepare(len), buffer(s, len)));
             test::fail_counter fc{n};
             test::string_istream ss{ios_, s};
-            parser_v1<isRequest, fail_body, fields> p{fc};
+            message<isRequest, fail_body, fields> m{fc};
+            parser<isRequest> p{m};
             error_code ec;
             parse(ss, sb, p, ec);
             if(! ec)
@@ -172,7 +174,8 @@ public:
         {
             streambuf sb;
             test::string_istream ss(ios_, "GET / X");
-            parser_v1<true, streambuf_body, fields> p;
+            message<true, streambuf_body, fields> m;
+            parser<true> p{m};
             parse(ss, sb, p);
             fail();
         }
@@ -244,52 +247,6 @@ public:
             failMatrix<false>(res[i], do_yield);
     }
 
-    void testReadHeaders(yield_context do_yield)
-    {
-        static std::size_t constexpr limit = 100;
-        std::size_t n;
-
-        for(n = 0; n < limit; ++n)
-        {
-            test::fail_stream<test::string_istream> fs{n, ios_,
-                "GET / HTTP/1.1\r\n"
-                "Host: localhost\r\n"
-                "User-Agent: test\r\n"
-                "Content-Length: 5\r\n"
-                "\r\n"
-            };
-            request_header m;
-            try
-            {
-                streambuf sb;
-                read(fs, sb, m);
-                break;
-            }
-            catch(std::exception const&)
-            {
-            }
-        }
-        BEAST_EXPECT(n < limit);
-
-        for(n = 0; n < limit; ++n)
-        {
-            test::fail_stream<test::string_istream> fs(n, ios_,
-                "GET / HTTP/1.1\r\n"
-                "Host: localhost\r\n"
-                "User-Agent: test\r\n"
-                "Content-Length: 0\r\n"
-                "\r\n"
-            );
-            request_header m;
-            error_code ec;
-            streambuf sb;
-            async_read(fs, sb, m, do_yield[ec]);
-            if(! ec)
-                break;
-        }
-        BEAST_EXPECT(n < limit);
-    }
-
     void testRead(yield_context do_yield)
     {
         static std::size_t constexpr limit = 100;
@@ -359,7 +316,8 @@ public:
         {
             streambuf sb;
             test::string_istream ss(ios_, "");
-            parser_v1<true, streambuf_body, fields> p;
+            message<true, streambuf_body, fields> m;
+            parser<true> p{m};
             error_code ec;
             parse(ss, sb, p, ec);
             BEAST_EXPECT(ec == boost::asio::error::eof);
@@ -367,7 +325,8 @@ public:
         {
             streambuf sb;
             test::string_istream ss(ios_, "");
-            parser_v1<true, streambuf_body, fields> p;
+            message<true, streambuf_body, fields> m;
+            parser<true> p{m};
             error_code ec;
             async_parse(ss, sb, p, do_yield[ec]);
             BEAST_EXPECT(ec == boost::asio::error::eof);
@@ -379,7 +338,6 @@ public:
         testThrow();
 
         yield_to(&read_test::testFailures, this);
-        yield_to(&read_test::testReadHeaders, this);
         yield_to(&read_test::testRead, this);
         yield_to(&read_test::testEof, this);
     }

@@ -10,7 +10,7 @@
 
 #include <beast/core/to_string.hpp>
 #include <beast/http/fields.hpp>
-#include <beast/http/parser_v1.hpp>
+#include <beast/http/parser.hpp>
 #include <beast/http/read.hpp>
 #include <beast/http/write.hpp>
 #include <beast/test/string_istream.hpp>
@@ -34,11 +34,12 @@ public:
             "\r\n"
             "xyz";
         test::string_istream ss(ios_, s);
-        parser_v1<false, streambuf_body, fields> p;
+        message<false, streambuf_body, fields> m;
+        parser<false> p{m};
         streambuf sb;
         parse(ss, sb, p);
-        BEAST_EXPECT(to_string(p.get().body.data()) == "xyz");
-        BEAST_EXPECT(boost::lexical_cast<std::string>(p.get()) == s);
+        BEAST_EXPECT(to_string(m.body.data()) == "xyz");
+        BEAST_EXPECT(boost::lexical_cast<std::string>(m) == s);
     }
 };
 

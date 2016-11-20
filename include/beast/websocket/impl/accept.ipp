@@ -9,7 +9,7 @@
 #define BEAST_WEBSOCKET_IMPL_ACCEPT_IPP
 
 #include <beast/http/message.hpp>
-#include <beast/http/parser_v1.hpp>
+#include <beast/http/parser.hpp>
 #include <beast/http/read.hpp>
 #include <beast/http/string_body.hpp>
 #include <beast/http/write.hpp>
