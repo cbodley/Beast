@@ -1,3 +1,7 @@
+* Add flat_streambuf
+
+--------------------------------------------------------------------------------
+
 1.0.0-b29
 
 * Fix compilation error in non-template class
