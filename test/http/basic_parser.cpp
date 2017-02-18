@@ -9,6 +9,7 @@
 #include <beast/http/basic_parser.hpp>
 
 #include <beast/core/buffer_cat.hpp>
+#include <beast/core/streambuf.hpp>
 #include <beast/unit_test/suite.hpp>
 
 namespace beast {

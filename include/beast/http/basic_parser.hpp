@@ -106,6 +106,30 @@ struct skip_body
     }
 };
 
+/** Information about the body or body chunk being parsed.
+*/
+struct body_info
+{
+    /** The type of body being parsed.
+
+        The values are as follows:
+
+        @li 0 The end of body is defined by the end of file.
+
+        @li 1 A Content-Length was specified.
+
+        @li 2 The body uses the chunked Transfer-Encoding.
+    */
+    int type;
+
+    /** The size of the body chunk.
+
+        If a Content-Length is specified, this will be the
+        number of bytes remaining in the message body.
+    */
+    std::uint64_t length;
+};
+
 /** A parser for decoding HTTP/1 wire format messages.
 
     This parser is designed to efficiently parse messages in the

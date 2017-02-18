@@ -311,7 +311,8 @@ public:
         BEAST_EXPECT(n < limit);
     }
 
-    void testEof(yield_context do_yield)
+    void
+    testEof(yield_context do_yield)
     {
         {
             streambuf sb;
@@ -333,7 +334,30 @@ public:
         }
     }
 
-    void run() override
+    // Example of reading directly into the body
+    template<class SyncReadStream, class DynamicBuffer,
+        bool isRequest, class Body, class Fields>
+    void
+    direct_read(SyncReadStream& stream, DynamicBuffer& dynabuf,
+        message<isRequest, Body, Fields>& msg)
+    {
+    }
+
+    void
+    testDirectRead(yield_context do_yield)
+    {
+        test::string_istream ss(ios_,
+            "HTTP/1.1 200 OK\r\n"
+            "Content-Length: 5\r\n"
+            "\r\n"
+            "*****");
+        streambuf sb;
+        message<false, streambuf_body, fields> m;
+        //direct_read(ss, sb, ...);
+    }
+
+    void
+    run() override
     {
         testThrow();
 
