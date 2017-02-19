@@ -40,11 +40,11 @@ public:
     /// The type of @ref header this object produces.
     using value_type = header<isRequest, Fields>;
 
-    /// Copy constructor (disallowed)
-    header_parser(header_parser const&) = delete;
+    /// Copy constructor.
+    header_parser(header_parser const&) = default;
 
-    /// Copy assignment (disallowed)
-    header_parser& operator=(header_parser const&) = delete;
+    /// Copy assignment.
+    header_parser& operator=(header_parser const&) = default;
 
     /** Move constructor.
 
@@ -56,7 +56,7 @@ public:
     /** Constructor
 
         @param args If present, additional arguments to be
-        forwarded to the @ref header constructor.
+        forwarded to the @ref beast::http::header constructor.
     */
     template<class... Args>
     explicit

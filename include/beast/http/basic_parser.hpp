@@ -232,6 +232,9 @@ template<bool isRequest, class Derived>
 class basic_parser
     : private detail::basic_parser_base
 {
+    template<bool OtherIsRequest, class OtherDerived>
+    friend class basic_parser;
+
     // Consider this message as having no body
     static unsigned constexpr flagOmitBody              = 1<<  0;
 
@@ -283,14 +286,22 @@ public:
     /// `true` if this parser parses requests, `false` for responses.
     static bool constexpr is_request = isRequest;
 
-    /// Destructor
-    ~basic_parser();
-
-    /// Copy constructor.
-    basic_parser(basic_parser const&) = default;
+    /// Copy constructor (disallowed).
+    basic_parser(basic_parser const&) = delete;
 
     /// Copy assignment (disallowed).
     basic_parser& operator=(basic_parser const&) = delete;
+
+    /// Destructor
+    ~basic_parser();
+
+    /** Move constructor
+
+        After the move, the only valid operation on the
+        moved-from object is destruction.
+    */
+    template<class OtherDerived>
+    basic_parser(basic_parser<isRequest, OtherDerived>&&);
 
     /** Set options on the parser.
 
@@ -594,13 +605,7 @@ protected:
         when a complete header has been received.
     */
     void
-    split(bool value)
-    {
-        if(value)
-            f_ |= flagSplitParse;
-        else
-            f_ &= ~flagSplitParse;
-    }
+    split(bool value);
 
 private:
     inline

@@ -30,6 +30,23 @@ basic_parser<isRequest, Derived>::
 }
 
 template<bool isRequest, class Derived>
+template<class OtherDerived>
+basic_parser<isRequest, Derived>::
+basic_parser(basic_parser<
+        isRequest, OtherDerived>&& other)
+    : buf_(other.buf_)
+    , buf_len_(other.buf_len_)
+    , len_(other.len_)
+    , skip_(other.skip_)
+    , x_(other.x_)
+    , f_(other.f_)
+    , version_(other.version_)
+    , status_(other.status_)
+{
+    other.buf_ = nullptr;
+}
+
+template<bool isRequest, class Derived>
 bool
 basic_parser<isRequest, Derived>::
 need_more() const
@@ -202,6 +219,31 @@ write_body(Reader& r,
     else if(f_ & flagChunked)
     {
         len_ -= len;
+    }
+}
+
+template<bool isRequest, class Derived>
+void
+basic_parser<isRequest, Derived>::
+split(bool value)
+{
+    if(value)
+    {
+        if(! (f_ & flagSplitParse))
+        {
+            BOOST_ASSERT(! have_header());
+            if(! have_header())
+                f_ |= flagSplitParse;
+        }
+    }
+    else
+    {
+        if(f_ & flagSplitParse)
+        {
+            f_ &= ~flagSplitParse;
+            if(f_ & flagHasBody)
+                f_ &= ~flagDone;
+        }
     }
 }
 

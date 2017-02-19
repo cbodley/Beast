@@ -9,7 +9,7 @@
 #define BEAST_HTTP_MESSAGE_PARSER_HPP
 
 #include <beast/http/message.hpp>
-#include <beast/http/basic_parser.hpp>
+#include <beast/http/header_parser.hpp>
 #include <boost/optional.hpp>
 #include <array>
 #include <type_traits>
@@ -37,6 +37,9 @@ class message_parser
     : public basic_parser<isRequest,
         message_parser<isRequest, Body, Fields>>
 {
+    using base_type = basic_parser<isRequest,
+        message_parser<isRequest, Body, Fields>>;
+
     using reader_type = typename Body::reader;
 
     message<isRequest, Body, Fields> m_;
@@ -45,6 +48,9 @@ class message_parser
 public:
     /// The type of message returned by the parser.
     using value_type = message<isRequest, Body, Fields>;
+
+    /// Constructor (default)
+    message_parser() = default;
 
     /// Copy constructor (disallowed)
     message_parser(message_parser const&) = delete;
@@ -61,12 +67,41 @@ public:
 
     /** Constructor
 
-        @param args If present, additional arguments to be
-        forwarded to the @ref header constructor.
+        @param args Optional arguments forwarded to the 
+        @ref http::header constructor.
+
+        @note This function participates in overload
+        resolution only if the first argument is not a
+        @ref http::header_parser or @ref message_parser.
+    */
+#if GENERATING_DOCS
+    template<class... Args>
+    explicit
+    msesage_parser(Args&&... args);
+#else
+    template<class Arg1, class... ArgN,
+        class = typename std::enable_if<
+            ! std::is_same<typename
+                std::decay<Arg1>::type,
+                    header_parser<isRequest, Fields>>::value &&
+            ! std::is_same<typename
+                std::decay<Arg1>::type, message_parser>::value
+                    >::type>
+    explicit
+    message_parser(Arg1&& arg1, ArgN&&... argn);
+#endif
+
+    /** Construct a message parser from a @ref header_parser.
+
+        @param parser The header parser to construct from.
+
+        @param args Optional arguments forwarded to the message
+        constructor.
     */
     template<class... Args>
     explicit
-    message_parser(Args&&... args);
+    message_parser(header_parser<
+        isRequest, Fields>&& parser, Args&&... args);
 
     /** Returns the parsed message.
 

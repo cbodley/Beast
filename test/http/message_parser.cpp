@@ -16,113 +16,14 @@
 #include <beast/test/yield_to.hpp>
 #include <beast/core/flat_streambuf.hpp>
 #include <beast/core/streambuf.hpp>
+#include <beast/http/header_parser.hpp>
 #include <beast/http/read.hpp>
+#include <beast/http/parse.hpp>
 #include <beast/http/string_body.hpp>
 #include <boost/system/system_error.hpp>
 
 namespace beast {
 namespace http {
-
-struct str_body
-{
-    using value_type = std::string;
-
-    class reader
-    {
-        std::size_t len_ = 0;
-        value_type& body_;
-
-        template<class F>
-        static
-        void
-        tryf(error_code& ec, F&& f)
-        {
-            try
-            {
-                f();
-            }
-            catch(std::length_error const&)
-            {
-                ec = make_error_code(
-                    boost::system::errc::message_size);
-            }
-            catch(std::bad_alloc const&)
-            {
-                ec = make_error_code(
-                    boost::system::errc::not_enough_memory);
-            }
-            catch(std::exception const&)
-            {
-                ec = make_error_code(
-                    boost::system::errc::io_error);
-            }
-        }
-
-    public:
-        using mutable_buffers_type =
-            boost::asio::mutable_buffers_1;
-
-        template<bool isRequest, class Fields>
-        explicit
-        reader(message<isRequest, str_body, Fields>& msg)
-            : body_(msg.body)
-        {
-        }
-
-        void
-        init(boost::optional<
-            std::uint64_t> const& content_length,
-                error_code& ec)
-        {
-            if(content_length)
-            {
-                if(*content_length >
-                        (std::numeric_limits<std::size_t>::max)())
-                {
-                    ec = make_error_code(
-                        boost::system::errc::message_size);
-                    return;
-                }
-                tryf(ec,
-                    [&]()
-                    {
-                        body_.reserve(*content_length);
-                    });
-            }
-        }
-
-        boost::optional<mutable_buffers_type>
-        prepare(std::size_t n, error_code& ec)
-        {
-            tryf(ec,
-                [&]()
-                {
-                    body_.resize(len_ + n);
-                });
-            return mutable_buffers_type{
-                &body_[len_], n};
-        }
-
-        void
-        commit(std::size_t n, error_code& ec)
-        {
-            if(body_.size() > len_ + n)
-                tryf(ec,
-                    [&]()
-                    {
-                        body_.resize(len_ + n);
-                    });
-            len_ = body_.size();
-        }
-
-        void
-        finish(error_code&)
-        {
-        }
-    };
-};
-
-//------------------------------------------------------------------------------
 
 class message_parser_test
     : public beast::unit_test::suite
@@ -269,10 +170,34 @@ public:
     }
 
     void
+    testExpect100Continue()
+    {
+        test::string_istream ss{ios_,
+            "POST / HTTP/1.1\r\n"
+            "Expect: 100-continue\r\n"
+            "Content-Length: 5\r\n"
+            "\r\n"
+            "*****"};
+        streambuf sb;
+        error_code ec;
+        header_parser<true, fields> p0;
+        parse(ss, sb, p0, ec);
+        BEAST_EXPECTS(! ec, ec.message());
+        BEAST_EXPECT(p0.have_header());
+        BEAST_EXPECT(! p0.is_done());
+        message_parser<true,
+            string_body, fields> p1{std::move(p0)};
+        parse(ss, sb, p1, ec);
+        BEAST_EXPECTS(! ec, ec.message());
+        BEAST_EXPECT(p1.get().body == "*****");
+    }
+
+    void
     run() override
     {
         testRead();
         testParse();
+        testExpect100Continue();
     }
 };
 

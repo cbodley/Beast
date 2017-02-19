@@ -362,21 +362,6 @@ public:
     }
 
     void
-    testExpectContinue(yield_context do_yield)
-    {
-        test::string_istream ss{ios_,
-            "POST / HTTP/1.1\r\n"
-            "Expect: 100-continue\r\n"
-            "Content-Length: 5\r\n"
-            "\r\n"
-            "*****"};
-        streambuf sb;
-        header_parser<true, fields> p;
-        //parse(ss, sb, p);
-        //message<true, string_body, fields> m{std::move(h)};
-    }
-
-    void
     run() override
     {
         testThrow();
@@ -384,7 +369,6 @@ public:
         yield_to(&read_test::testFailures, this);
         yield_to(&read_test::testRead, this);
         yield_to(&read_test::testEof, this);
-        yield_to(&read_test::testExpectContinue, this);
     }
 };
 
