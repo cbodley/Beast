@@ -14,6 +14,7 @@
 #include <beast/core/detail/type_traits.hpp>
 #include <boost/asio/buffer.hpp>
 #include <boost/logic/tribool.hpp>
+#include <boost/optional.hpp>
 
 namespace beast {
 namespace http {
@@ -34,30 +35,102 @@ private:
 
     class reader
     {
-        value_type& sb_;
+        value_type& body_;
 
-    public:
-        template<bool isRequest, class Fields>
-        explicit
-        reader(message<isRequest,
-                basic_dynabuf_body, Fields>& m) noexcept
-            : sb_(m.body)
+        template<class F>
+        static
+        void
+        tryf(error_code& ec, F&& f)
         {
+            try
+            {
+                f();
+            }
+            catch(std::length_error const&)
+            {
+                ec = make_error_code(
+                    boost::system::errc::message_size);
+            }
+            catch(std::bad_alloc const&)
+            {
+                ec = make_error_code(
+                    boost::system::errc::not_enough_memory);
+            }
+            catch(std::exception const&)
+            {
+                ec = make_error_code(
+                    boost::system::errc::io_error);
+            }
         }
 
+    public:
         void
-        init(error_code&) noexcept
+        init(error_code&)
         {
         }
 
         void
         write(void const* data,
-            std::size_t size, error_code&) noexcept
+            std::size_t size, error_code&)
         {
             using boost::asio::buffer;
             using boost::asio::buffer_copy;
-            sb_.commit(buffer_copy(
-                sb_.prepare(size), buffer(data, size)));
+            body_.commit(buffer_copy(
+                body_.prepare(size), buffer(data, size)));
+        }
+
+
+
+        using mutable_buffers_type =
+            typename DynamicBuffer::mutable_buffers_type;
+
+        template<bool isRequest, class Fields>
+        explicit
+        reader(message<isRequest,
+                basic_dynabuf_body, Fields>& msg)
+            : body_(msg.body)
+        {
+        }
+
+        void
+        init(boost::optional<
+            std::uint64_t> const& content_length,
+                error_code& ec)
+        {
+            beast::detail::ignore_unused(content_length);
+            beast::detail::ignore_unused(ec);
+        }
+
+        boost::optional<mutable_buffers_type>
+        prepare(std::size_t n, error_code& ec)
+        {
+            boost::optional<
+                mutable_buffers_type> result;
+            tryf(ec,
+                [&]()
+                {
+                    result.emplace(
+                        body_.prepare(n));
+                });
+            if(ec)
+                return body_.prepare(0);
+            return *result;
+        }
+
+        void
+        commit(std::size_t n, error_code& ec)
+        {
+            tryf(ec,
+                [&]()
+                {
+                    body_.commit(n);
+                });
+        }
+
+        void
+        finish(error_code& ec)
+        {
+            beast::detail::ignore_unused(ec);
         }
     };
 

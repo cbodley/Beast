@@ -18,6 +18,7 @@
 #include <beast/core/streambuf.hpp>
 #include <beast/http/read.hpp>
 #include <beast/http/string_body.hpp>
+#include <boost/system/system_error.hpp>
 
 namespace beast {
 namespace http {
@@ -30,6 +31,32 @@ struct str_body
     {
         std::size_t len_ = 0;
         value_type& body_;
+
+        template<class F>
+        static
+        void
+        tryf(error_code& ec, F&& f)
+        {
+            try
+            {
+                f();
+            }
+            catch(std::length_error const&)
+            {
+                ec = make_error_code(
+                    boost::system::errc::message_size);
+            }
+            catch(std::bad_alloc const&)
+            {
+                ec = make_error_code(
+                    boost::system::errc::not_enough_memory);
+            }
+            catch(std::exception const&)
+            {
+                ec = make_error_code(
+                    boost::system::errc::io_error);
+            }
+        }
 
     public:
         using mutable_buffers_type =
@@ -51,30 +78,46 @@ struct str_body
             {
                 if(*content_length >
                         (std::numeric_limits<std::size_t>::max)())
-                    throw std::domain_error{"Content-Length overflow"};
-                body_.reserve(*content_length);
+                {
+                    ec = make_error_code(
+                        boost::system::errc::message_size);
+                    return;
+                }
+                tryf(ec,
+                    [&]()
+                    {
+                        body_.reserve(*content_length);
+                    });
             }
         }
 
-        mutable_buffers_type
+        boost::optional<mutable_buffers_type>
         prepare(std::size_t n, error_code& ec)
         {
-            body_.resize(len_ + n);
-            return {&body_[len_], n};
+            tryf(ec,
+                [&]()
+                {
+                    body_.resize(len_ + n);
+                });
+            return mutable_buffers_type{
+                &body_[len_], n};
         }
 
         void
         commit(std::size_t n, error_code& ec)
         {
             if(body_.size() > len_ + n)
-                body_.resize(len_ + n);
+                tryf(ec,
+                    [&]()
+                    {
+                        body_.resize(len_ + n);
+                    });
             len_ = body_.size();
         }
 
         void
-        finish(error_code& ec)
+        finish(error_code&)
         {
-            body_.resize(len_);
         }
     };
 };

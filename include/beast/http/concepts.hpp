@@ -230,9 +230,7 @@ struct is_Reader<T, M, beast::detail::void_t<decltype(
         std::declval<void const*>(),
         std::declval<std::size_t>(),
         std::declval<error_code&>())
-            )> > : std::integral_constant<bool,
-    std::is_nothrow_constructible<T, M&>::value
-        >
+            )> > : std::true_type
 {
     static_assert(std::is_same<
         typename M::body_type::reader, T>::value,

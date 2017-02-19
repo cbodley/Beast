@@ -35,29 +35,112 @@ private:
 
     class reader
     {
-        value_type& s_;
+        value_type& body_;
+        std::size_t len_ = 0;
 
-    public:
-        template<bool isRequest, class Fields>
-        explicit
-        reader(message<isRequest,
-                string_body, Fields>& m) noexcept
-            : s_(m.body)
+        template<class F>
+        static
+        void
+        tryf(error_code& ec, F&& f)
         {
+            try
+            {
+                f();
+            }
+            catch(std::length_error const&)
+            {
+                ec = make_error_code(
+                    boost::system::errc::message_size);
+            }
+            catch(std::bad_alloc const&)
+            {
+                ec = make_error_code(
+                    boost::system::errc::not_enough_memory);
+            }
+            catch(std::exception const&)
+            {
+                ec = make_error_code(
+                    boost::system::errc::io_error);
+            }
         }
 
+    public:
         void
-        init(error_code&) noexcept
+        init(error_code&)
         {
         }
 
         void
         write(void const* data,
-            std::size_t size, error_code&) noexcept
+            std::size_t size, error_code&)
         {
-            auto const n = s_.size();
-            s_.resize(n + size);
-            std::memcpy(&s_[n], data, size);
+            auto const n = body_.size();
+            body_.resize(n + size);
+            std::memcpy(&body_[n], data, size);
+        }
+
+
+
+        using mutable_buffers_type =
+            boost::asio::mutable_buffers_1;
+
+        template<bool isRequest, class Fields>
+        explicit
+        reader(message<isRequest,
+                string_body, Fields>& m)
+            : body_(m.body)
+        {
+        }
+
+        void
+        init(boost::optional<
+            std::uint64_t> const& content_length,
+                error_code& ec)
+        {
+            if(content_length)
+            {
+                if(*content_length >
+                        (std::numeric_limits<std::size_t>::max)())
+                {
+                    ec = make_error_code(
+                        boost::system::errc::message_size);
+                    return;
+                }
+                tryf(ec,
+                    [&]()
+                    {
+                        body_.reserve(*content_length);
+                    });
+            }
+        }
+
+        boost::optional<mutable_buffers_type>
+        prepare(std::size_t n, error_code& ec)
+        {
+            tryf(ec,
+                [&]()
+                {
+                    body_.resize(len_ + n);
+                });
+            return mutable_buffers_type{
+                &body_[len_], n};
+        }
+
+        void
+        commit(std::size_t n, error_code& ec)
+        {
+            if(body_.size() > len_ + n)
+                tryf(ec,
+                    [&]()
+                    {
+                        body_.resize(len_ + n);
+                    });
+            len_ = body_.size();
+        }
+
+        void
+        finish(error_code&)
+        {
         }
     };
 
