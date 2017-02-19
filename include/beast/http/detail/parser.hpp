@@ -9,6 +9,7 @@
 #define BEAST_HTTP_DETAIL_PARSER_HPP
 
 #include <beast/http/message.hpp>
+#include <boost/asio/buffer.hpp>
 #include <boost/utility/string_ref.hpp>
 #include <utility>
 
@@ -38,7 +39,9 @@ protected:
 
         virtual
         void
-        on_header(error_code&)
+        on_header(boost::optional<
+            std::uint64_t> const&,
+                error_code&)
         {
         }
 
@@ -160,9 +163,11 @@ protected:
     template<class Body, class Fields>
     class req_impl : public req_impl_base
     {
+        using reader_type =
+            typename Body::reader;
+
         message<true, Body, Fields>& m_;
-        boost::optional<
-            typename Body::reader> r_;
+        boost::optional<reader_type> r_;
 
     public:
         req_impl(req_impl&&) = default;
@@ -200,17 +205,29 @@ protected:
         }
 
         void
-        on_header(error_code& ec) override
+        on_header(boost::optional<
+            std::uint64_t> const& content_length,
+                error_code& ec) override
         {
             r_.emplace(m_);
-            r_->init(ec);
+            r_->init(content_length, ec);
         }
 
         void
         on_body(boost::string_ref const& s,
             error_code& ec) override
         {
-            r_->write(s.data(), s.size(), ec);
+            using boost::asio::buffer;
+            using boost::asio::buffer_copy;
+            boost::optional<typename
+                reader_type::mutable_buffers_type> mb;
+            mb = r_->prepare(s.size(), ec);
+            if(ec)
+                return;
+            r_->commit(buffer_copy(*mb,
+                buffer(s.data(), s.size())), ec);
+            if(ec)
+                return;
         }
 
         void
@@ -222,6 +239,9 @@ protected:
     template<class Body, class Fields>
     class res_impl : public res_impl_base
     {
+        using reader_type =
+            typename Body::reader;
+
         message<false, Body, Fields>& m_;
         boost::optional<
             typename Body::reader> r_;
@@ -261,17 +281,29 @@ protected:
         }
 
         void
-        on_header(error_code& ec) override
+        on_header(boost::optional<
+            std::uint64_t> const& content_length,
+                error_code& ec) override
         {
             r_.emplace(m_);
-            r_->init(ec);
+            r_->init(content_length, ec);
         }
 
         void
         on_body(boost::string_ref const& s,
             error_code& ec) override
         {
-            r_->write(s.data(), s.size(), ec);
+            using boost::asio::buffer;
+            using boost::asio::buffer_copy;
+            boost::optional<typename
+                reader_type::mutable_buffers_type> mb;
+            mb = r_->prepare(s.size(), ec);
+            if(ec)
+                return;
+            r_->commit(buffer_copy(*mb,
+                buffer(s.data(), s.size())), ec);
+            if(ec)
+                return;
         }
 
         void
@@ -293,19 +325,30 @@ protected:
 
         struct reader
         {
+            using mutable_buffers_type =
+                boost::asio::mutable_buffers_1;
+
             message<true,
                 Body_exemplar,
                 Fields_exemplar>& m;
-            
+
             template<bool isRequest,
                 class Body, class Fields>
             reader(message<
                 isRequest, Body, Fields>&);
 
-            void init(error_code&);
+            void
+            init(boost::optional<
+                std::uint64_t> const&, error_code&);
 
-            void write(void const*,
-                std::size_t, error_code&);
+            boost::optional<mutable_buffers_type>
+            prepare(std::size_t, error_code&);
+
+            void
+            commit(std::size_t, error_code&);
+
+            void
+            finish(error_code&);
         };
     };
 };

@@ -9,11 +9,12 @@
 #define BEAST_HTTP_CONCEPTS_HPP
 
 #include <beast/core/error.hpp>
-#include <beast/core/detail/buffer_concepts.hpp>
+#include <beast/core/buffer_concepts.hpp>
 #include <beast/core/detail/type_traits.hpp>
 #include <beast/http/resume_context.hpp>
 #include <boost/asio/buffer.hpp>
 #include <boost/logic/tribool.hpp>
+#include <boost/optional.hpp>
 #include <type_traits>
 #include <utility>
 
@@ -224,13 +225,28 @@ struct is_Reader : std::false_type {};
 
 template<class T, class M>
 struct is_Reader<T, M, beast::detail::void_t<decltype(
+    std::declval<typename T::mutable_buffers_type>,
     std::declval<T>().init(
+        std::declval<boost::optional<std::uint64_t>>(),
         std::declval<error_code&>()),
-    std::declval<T>().write(
-        std::declval<void const*>(),
+    std::declval<T>().prepare(
         std::declval<std::size_t>(),
+        std::declval<error_code&>()),
+    std::declval<T>().commit(
+        std::declval<std::size_t>(),
+        std::declval<error_code&>()),
+    std::declval<T>().finish(
         std::declval<error_code&>())
-            )> > : std::true_type
+            )> > : std::integral_constant<bool,
+    is_MutableBufferSequence<
+        typename T::mutable_buffers_type>::value &&
+    std::is_convertible<decltype(
+        std::declval<T>().prepare(
+            std::declval<std::size_t>(),
+            std::declval<error_code&>())),
+        boost::optional<typename T::mutable_buffers_type>
+            >::value>
+
 {
     static_assert(std::is_same<
         typename M::body_type::reader, T>::value,

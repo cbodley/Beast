@@ -64,23 +64,6 @@ private:
         }
 
     public:
-        void
-        init(error_code&)
-        {
-        }
-
-        void
-        write(void const* data,
-            std::size_t size, error_code&)
-        {
-            using boost::asio::buffer;
-            using boost::asio::buffer_copy;
-            body_.commit(buffer_copy(
-                body_.prepare(size), buffer(data, size)));
-        }
-
-
-
         using mutable_buffers_type =
             typename DynamicBuffer::mutable_buffers_type;
 

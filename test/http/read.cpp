@@ -18,6 +18,7 @@
 #include <beast/test/yield_to.hpp>
 #include <beast/unit_test/suite.hpp>
 #include <boost/asio/spawn.hpp>
+#include <memory>
 
 namespace beast {
 namespace http {
@@ -56,27 +57,47 @@ public:
         class reader
         {
             value_type& body_;
+            std::unique_ptr<char[]> p_;
 
         public:
+            using mutable_buffers_type =
+                boost::asio::mutable_buffers_1;
+
             template<bool isRequest, class Allocator>
             explicit
-            reader(message<isRequest, fail_body, Allocator>& msg) noexcept
+            reader(message<isRequest,
+                    fail_body, Allocator>& msg) noexcept
                 : body_(msg.body)
             {
             }
 
             void
-            init(error_code& ec) noexcept
+            init(boost::optional<
+                std::uint64_t> const&, error_code& ec) noexcept
+            {
+                body_.fc_.fail(ec);
+            }
+
+            boost::optional<mutable_buffers_type>
+            prepare(std::size_t n, error_code& ec)
+            {
+                if(body_.fc_.fail(ec))
+                    return {};
+                p_.reset(new char[n]);
+                return mutable_buffers_type{
+                    p_.get(), n};
+            }
+
+            void
+            commit(std::size_t n, error_code& ec)
             {
                 body_.fc_.fail(ec);
             }
 
             void
-            write(void const* data,
-                std::size_t size, error_code& ec) noexcept
+            finish(error_code& ec)
             {
-                if(body_.fc_.fail(ec))
-                    return;
+                body_.fc_.fail(ec);
             }
         };
     };

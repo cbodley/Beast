@@ -177,7 +177,8 @@ private:
     void
     on_header(error_code& ec)
     {
-        impl_->on_header(ec);
+        impl_->on_header(
+            this->content_length(), ec);
     }
 
     void

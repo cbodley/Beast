@@ -65,22 +65,6 @@ private:
         }
 
     public:
-        void
-        init(error_code&)
-        {
-        }
-
-        void
-        write(void const* data,
-            std::size_t size, error_code&)
-        {
-            auto const n = body_.size();
-            body_.resize(n + size);
-            std::memcpy(&body_[n], data, size);
-        }
-
-
-
         using mutable_buffers_type =
             boost::asio::mutable_buffers_1;
 
