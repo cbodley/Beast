@@ -54,8 +54,8 @@ unit-test http-tests :
     http/fields.cpp
     http/header_parser.cpp
     http/message.cpp
+    http/message_parser.cpp
     http/parse.cpp
-    http/parser.cpp
     http/read.cpp
     http/reason.cpp
     http/resume_context.cpp

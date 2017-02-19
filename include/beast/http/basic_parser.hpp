@@ -280,6 +280,9 @@ protected:
     basic_parser() = default;
 
 public:
+    /// `true` if this parser parses requests, `false` for responses.
+    static bool constexpr is_request = isRequest;
+
     /// Destructor
     ~basic_parser();
 
@@ -454,14 +457,15 @@ public:
 
         The parser is optimized for the case where the
         input buffer sequence consists of a single contiguous
-        buffer. The @ref flat_streambuf class is provided,
+        buffer. The @ref beast::flat_streambuf class is provided,
         which guarantees that the input sequence of the
         stream buffer will be represented by exactly one
         contiguous buffer. To ensure the optimum performance
-        of the parser, use @ref flat_streambuf with HTTP
-        algorithms such as @ref read, @ref async_read,
-        @ref parse, and @ref async_parse. Alternatively,
-        the caller may use its own techniques to ensure that
+        of the parser, use @ref beast::flat_streambuf with HTTP
+        algorithms such as @ref beast::http::read,
+        @ref beast::http::async_read, @ref beast::http::parse,
+        and @ref beast::http::async_parse. Alternatively,
+        the caller may use custom techniques to ensure that
         the structured portion of the HTTP message (header
         and chunk preambles if chunked) is contained in a
         linear buffer.
@@ -501,9 +505,10 @@ public:
         wants to take over the management of memory for
         the incoming bytes and ensure optimum parser
         performance. Alternatively, callers can use the
-        @ref flat_streambuf class with HTTP algorithms
-        such as @ref read, @ref async_read, @ref parse,
-        and @ref async_parse.
+        @ref beast::flat_streambuf class with HTTP algorithms
+        such as @ref beast::http::read,
+        @ref beast::http::async_read, @ref beast::http::parse,
+        and @ref beast::http::async_parse.
 
         @param buffer A buffer that contains the input
         sequence to be parsed.

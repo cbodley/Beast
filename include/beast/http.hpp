@@ -15,8 +15,8 @@
 #include <beast/http/fields.hpp>
 #include <beast/http/header_parser.hpp>
 #include <beast/http/message.hpp>
+#include <beast/http/message_parser.hpp>
 #include <beast/http/parse.hpp>
-#include <beast/http/parser.hpp>
 #include <beast/http/read.hpp>
 #include <beast/http/reason.hpp>
 #include <beast/http/resume_context.hpp>

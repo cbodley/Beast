@@ -9,8 +9,8 @@
 #define BEAST_HTTP_IMPL_READ_IPP_HPP
 
 #include <beast/http/concepts.hpp>
+#include <beast/http/message_parser.hpp>
 #include <beast/http/parse.hpp>
-#include <beast/http/parser.hpp>
 #include <beast/core/bind_handler.hpp>
 #include <beast/core/handler_helpers.hpp>
 #include <beast/core/handler_ptr.hpp>
@@ -28,7 +28,7 @@ template<class Stream, class DynamicBuffer,
 class read_op
 {
     using parser_type =
-        parser<isRequest>;
+        message_parser<isRequest, Body, Fields>;
 
     using message_type =
         message<isRequest, Body, Fields>;
@@ -50,7 +50,6 @@ class read_op
             , s(s_)
             , db(sb_)
             , m(m_)
-            , p(m)
         {
         }
     };
@@ -117,11 +116,16 @@ operator()(error_code ec, bool again)
         switch(d.state)
         {
         case 0:
-            d.state = 99;
+            d.state = 1;
             async_parse(d.s, d.db, d.p, std::move(*this));
             return;
+
+        case 1:
+            d.m = d.p.release();
+            goto upcall;
         }
     }
+upcall:
     d_.invoke(ec);
 }
 
@@ -168,10 +172,11 @@ read(SyncReadStream& stream, DynamicBuffer& dynabuf,
     static_assert(is_Reader<typename Body::reader,
         message<isRequest, Body, Fields>>::value,
             "Reader requirements not met");
-    parser<isRequest> p{m};
+    message_parser<isRequest, Body, Fields> p;
     beast::http::parse(stream, dynabuf, p, ec);
     if(ec)
         return;
+    m = p.release();
 }
 
 template<class AsyncReadStream, class DynamicBuffer,

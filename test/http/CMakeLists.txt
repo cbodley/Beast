@@ -18,8 +18,8 @@ add_executable (http-tests
     fields.cpp
     header_parser.cpp
     message.cpp
+    message_parser.cpp
     parse.cpp
-    parser.cpp
     read.cpp
     reason.cpp
     resume_context.cpp

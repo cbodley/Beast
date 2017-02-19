@@ -6,7 +6,7 @@
 //
 
 // Test that header file is self-contained.
-#include <beast/http/parser.hpp>
+#include <beast/http/message_parser.hpp>
 
 #include "fail_parser.hpp"
 
@@ -124,7 +124,7 @@ struct str_body
 
 //------------------------------------------------------------------------------
 
-class parser_test
+class message_parser_test
     : public beast::unit_test::suite
     , public beast::test::enable_yield_to
 {
@@ -217,8 +217,7 @@ public:
         using boost::asio::buffer;
         {
             error_code ec;
-            message<true, string_body, fields> m;
-            parser<true> p{m};
+            message_parser<true, string_body, fields> p;
             std::string const s =
                 "GET / HTTP/1.1\r\n"
                 "User-Agent: test\r\n"
@@ -226,6 +225,7 @@ public:
                 "\r\n"
                 "*";
             p.write(buffer(s), ec);
+            auto const& m = p.get();
             BEAST_EXPECTS(! ec, ec.message());
             BEAST_EXPECT(p.is_done());
             BEAST_EXPECT(m.method == "GET");
@@ -236,8 +236,7 @@ public:
         }
         {
             error_code ec;
-            message<false, string_body, fields> m;
-            parser<false> p{m};
+            message_parser<false, string_body, fields> p;
             std::string const s =
                 "HTTP/1.1 200 OK\r\n"
                 "Server: test\r\n"
@@ -245,6 +244,7 @@ public:
                 "\r\n"
                 "*";
             p.write(buffer(s), ec);
+            auto const& m = p.get();
             BEAST_EXPECTS(! ec, ec.message());
             BEAST_EXPECT(p.is_done());
             BEAST_EXPECT(m.status == 200);
@@ -256,8 +256,7 @@ public:
         // skip body
         {
             error_code ec;
-            message<false, string_body, fields> m;
-            parser<false> p{m};
+            message_parser<false, string_body, fields> p;
             std::string const s =
                 "HTTP/1.1 200 Connection Established\r\n"
                 "Proxy-Agent: Zscaler/5.1\r\n"
@@ -277,7 +276,7 @@ public:
     }
 };
 
-BEAST_DEFINE_TESTSUITE(parser,http,beast);
+BEAST_DEFINE_TESTSUITE(message_parser,http,beast);
 
 } // http
 } // beast

@@ -180,8 +180,7 @@ public:
                 sb.prepare(len), buffer(s, len)));
             test::fail_counter fc{n};
             test::string_istream ss{ios_, s};
-            message<isRequest, fail_body, fields> m{fc};
-            parser<isRequest> p{m};
+            message_parser<isRequest, fail_body, fields> p{fc};
             error_code ec;
             parse(ss, sb, p, ec);
             if(! ec)
@@ -196,8 +195,7 @@ public:
         {
             streambuf sb;
             test::string_istream ss(ios_, "GET / X");
-            message<true, streambuf_body, fields> m;
-            parser<true> p{m};
+            message_parser<true, streambuf_body, fields> p;
             parse(ss, sb, p);
             fail();
         }
@@ -339,8 +337,7 @@ public:
         {
             streambuf sb;
             test::string_istream ss(ios_, "");
-            message<true, streambuf_body, fields> m;
-            parser<true> p{m};
+            message_parser<true, streambuf_body, fields> p;
             error_code ec;
             parse(ss, sb, p, ec);
             BEAST_EXPECT(ec == boost::asio::error::eof);
@@ -348,8 +345,7 @@ public:
         {
             streambuf sb;
             test::string_istream ss(ios_, "");
-            message<true, streambuf_body, fields> m;
-            parser<true> p{m};
+            message_parser<true, streambuf_body, fields> p;
             error_code ec;
             async_parse(ss, sb, p, do_yield[ec]);
             BEAST_EXPECT(ec == boost::asio::error::eof);

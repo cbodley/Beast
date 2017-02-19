@@ -38,7 +38,13 @@ class header_parser
 
 public:
     /// The type of @ref header this object produces.
-    using header_type = header<isRequest, Fields>;
+    using value_type = header<isRequest, Fields>;
+
+    /// Copy constructor (disallowed)
+    header_parser(header_parser const&) = delete;
+
+    /// Copy assignment (disallowed)
+    header_parser& operator=(header_parser const&) = delete;
 
     /** Move constructor.
 
@@ -46,12 +52,6 @@ public:
         on the moved-from object is destruction.
     */
     header_parser(header_parser&&) = default;
-
-    /// Copy constructor (disallowed)
-    header_parser(header_parser const&) = delete;
-
-    /// Copy assignment (disallowed)
-    header_parser& operator=(header_parser const&) = delete;
 
     /** Constructor
 
@@ -66,16 +66,17 @@ public:
 
         Only valid if @ref have_header would return `true`.
     */
-    header_type const&
+    value_type const&
     get() const
     {
         return h_;
     }
 
     /** Returns the parsed header.
+
         Only valid if @ref have_header would return `true`.
     */
-    header_type&
+    value_type&
     get()
     {
         return h_;
@@ -87,9 +88,9 @@ public:
         valid if @ref have_header would return `true`.
 
         Requires:
-            @ref header_type is @b MoveConstructible
+            @ref value_type is @b MoveConstructible
     */
-    header_type
+    value_type
     release()
     {
         static_assert(std::is_move_constructible<decltype(h_)>::value,
