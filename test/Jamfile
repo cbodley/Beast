@@ -52,6 +52,7 @@ unit-test http-tests :
     http/concepts.cpp
     http/error.cpp
     http/fields.cpp
+    http/header_parser.cpp
     http/message.cpp
     http/parse.cpp
     http/parser.cpp

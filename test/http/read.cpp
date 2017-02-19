@@ -11,8 +11,9 @@
 #include "fail_parser.hpp"
 
 #include <beast/http/fields.hpp>
-#include <beast/http/parser.hpp>
+#include <beast/http/header_parser.hpp>
 #include <beast/http/streambuf_body.hpp>
+#include <beast/http/string_body.hpp>
 #include <beast/test/fail_stream.hpp>
 #include <beast/test/string_istream.hpp>
 #include <beast/test/yield_to.hpp>
@@ -365,16 +366,18 @@ public:
     }
 
     void
-    testDirectRead(yield_context do_yield)
+    testExpectContinue(yield_context do_yield)
     {
-        test::string_istream ss(ios_,
-            "HTTP/1.1 200 OK\r\n"
+        test::string_istream ss{ios_,
+            "POST / HTTP/1.1\r\n"
+            "Expect: 100-continue\r\n"
             "Content-Length: 5\r\n"
             "\r\n"
-            "*****");
+            "*****"};
         streambuf sb;
-        message<false, streambuf_body, fields> m;
-        //direct_read(ss, sb, ...);
+        header_parser<true, fields> p;
+        //parse(ss, sb, p);
+        //message<true, string_body, fields> m{std::move(h)};
     }
 
     void
@@ -385,6 +388,7 @@ public:
         yield_to(&read_test::testFailures, this);
         yield_to(&read_test::testRead, this);
         yield_to(&read_test::testEof, this);
+        yield_to(&read_test::testExpectContinue, this);
     }
 };
 

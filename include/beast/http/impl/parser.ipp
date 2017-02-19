@@ -38,14 +38,6 @@ parser(parser&& other)
 }
 
 template<bool isRequest>
-template<class Fields>
-parser<isRequest>::
-parser(header<isRequest, Fields>& m)
-{
-    construct(m);
-}
-
-template<bool isRequest>
 template<class Body, class Fields>
 parser<isRequest>::
 parser(message<isRequest, Body, Fields>& m)

@@ -13,6 +13,7 @@
 #include <beast/http/chunk_encode.hpp>
 #include <beast/http/error.hpp>
 #include <beast/http/fields.hpp>
+#include <beast/http/header_parser.hpp>
 #include <beast/http/message.hpp>
 #include <beast/http/parse.hpp>
 #include <beast/http/parser.hpp>

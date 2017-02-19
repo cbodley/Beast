@@ -9,7 +9,7 @@
 #define BEAST_WEBSOCKET_IMPL_ACCEPT_IPP
 
 #include <beast/http/message.hpp>
-#include <beast/http/parser.hpp>
+#include <beast/http/header_parser.hpp>
 #include <beast/http/read.hpp>
 #include <beast/http/string_body.hpp>
 #include <beast/http/write.hpp>
@@ -151,8 +151,7 @@ class stream<NextLayer>::accept_op
     {
         bool cont;
         stream<NextLayer>& ws;
-        http::request_header req;
-        http::parser<true> p;
+        http::header_parser<true, http::fields> p;
         int state = 0;
 
         template<class Buffers>
@@ -161,7 +160,6 @@ class stream<NextLayer>::accept_op
             : cont(beast_asio_helpers::
                 is_continuation(handler))
             , ws(ws_)
-            , p(req)
         {
             using boost::asio::buffer_copy;
             using boost::asio::buffer_size;
@@ -256,11 +254,14 @@ operator()(error_code ec,
                 ec = http::error::partial_message;
                 goto upcall;
             }
-            // respond to request
+            // Arguments from our state must be
+            // moved to the stack before releasing
+            // the handler.
             auto& ws = d.ws;
-            auto req = std::move(d.req);
+            auto h = d.p.release();
             response_op<Handler>{
-                d_.release_handler(), ws, req, true};
+                d_.release_handler(),
+                    ws, std::move(h), true};
             return;
         }
         }
@@ -380,8 +381,7 @@ accept(ConstBufferSequence const& buffers, error_code& ec)
     stream_.buffer().commit(buffer_copy(
         stream_.buffer().prepare(
             buffer_size(buffers)), buffers));
-    http::request_header m;
-    http::parser<true> p{m};
+    http::header_parser<true, http::fields> p;
     http::parse(next_layer(), stream_.buffer(), p, ec);
     if(ec)
         return;
@@ -391,7 +391,7 @@ accept(ConstBufferSequence const& buffers, error_code& ec)
         ec = http::error::partial_message;
         return;
     }
-    accept(m, ec);
+    accept(p.get(), ec);
 }
 
 template<class NextLayer>

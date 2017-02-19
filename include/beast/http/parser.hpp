@@ -21,7 +21,7 @@ namespace http {
 /** A parser for producing HTTP/1 messages.
 
     This class uses the basic HTTP/1 wire format parser to convert
-    a series of octets into a @ref header or @ref message.
+    a series of octets into a @ref message.
 
     @note A new instance of the parser is required for each message.
 */
@@ -59,21 +59,6 @@ public:
         on the moved-from object is destruction.
     */
     parser(parser&& other);
-
-    /** Construct a parser to process a header.
-
-        This constructor creates a new parser which attempts
-        to parse a complete header from the input sequence.
-        If the semantics of the message indicate that there
-        is no body, or the caller sets the @ref skip_body
-        option, the message is considered complete.
-
-        After the parse is completed, if a message body is
-        indicated the parser is left in a state ready to
-        continue parsing the body.
-    */
-    template<class Fields>
-    parser(header<isRequest, Fields>& m);
 
     /** Construct a parser to process a message.
 
