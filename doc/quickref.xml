@@ -32,7 +32,6 @@
             <member><link linkend="beast.ref.http__basic_dynabuf_body">basic_dynabuf_body</link></member>
             <member><link linkend="beast.ref.http__basic_fields">basic_fields</link></member>
             <member><link linkend="beast.ref.http__basic_parser">basic_parser</link></member>
-            <member><link linkend="beast.ref.http__empty_body">empty_body</link></member>
             <member><link linkend="beast.ref.http__fields">fields</link></member>
             <member><link linkend="beast.ref.http__header">header</link></member>
             <member><link linkend="beast.ref.http__message">message</link></member>

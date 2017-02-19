@@ -11,7 +11,6 @@
 #include <beast/http/basic_fields.hpp>
 #include <beast/http/basic_parser.hpp>
 #include <beast/http/chunk_encode.hpp>
-#include <beast/http/empty_body.hpp>
 #include <beast/http/error.hpp>
 #include <beast/http/fields.hpp>
 #include <beast/http/message.hpp>
