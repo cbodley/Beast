@@ -90,7 +90,7 @@ struct header_max_size
 
     Example:
     @code
-        parser<true, empty_body, fields> p;
+        parser<true> p;
         p.set_option(skip_body{true});
     @endcode
     @note Objects of this type are passed to @ref basic_parser::set_option.

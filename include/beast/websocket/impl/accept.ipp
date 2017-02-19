@@ -35,13 +35,13 @@ class stream<NextLayer>::response_op
     {
         bool cont;
         stream<NextLayer>& ws;
-        http::response<http::string_body> res;
+        http::response_header res;
         error_code final_ec;
         int state = 0;
 
-        template<class Body, class Fields>
+        template<class Fields>
         data(Handler&, stream<NextLayer>& ws_,
-            http::request<Body, Fields> const& req,
+            http::header<true, Fields> const& req,
                 bool cont_)
             : cont(cont_)
             , ws(ws_)
@@ -151,7 +151,8 @@ class stream<NextLayer>::accept_op
     {
         bool cont;
         stream<NextLayer>& ws;
-        http::request<http::string_body> req;
+        http::request_header req;
+        http::parser<true> p;
         int state = 0;
 
         template<class Buffers>
@@ -160,6 +161,7 @@ class stream<NextLayer>::accept_op
             : cont(beast_asio_helpers::
                 is_continuation(handler))
             , ws(ws_)
+            , p(req)
         {
             using boost::asio::buffer_copy;
             using boost::asio::buffer_size;
@@ -190,7 +192,7 @@ public:
         (*this)(ec, 0);
     }
 
-    void operator()(error_code const& ec,
+    void operator()(error_code ec,
         std::size_t bytes_transferred, bool again = true);
 
     friend
@@ -228,7 +230,7 @@ template<class NextLayer>
 template<class Handler>
 void
 stream<NextLayer>::accept_op<Handler>::
-operator()(error_code const& ec,
+operator()(error_code ec,
     std::size_t bytes_transferred, bool again)
 {
     beast::detail::ignore_unused(bytes_transferred);
@@ -241,14 +243,19 @@ operator()(error_code const& ec,
         case 0:
             // read message
             d.state = 1;
-            http::async_read(d.ws.next_layer(),
-                d.ws.stream_.buffer(), d.req,
+            http::async_parse(d.ws.next_layer(),
+                d.ws.stream_.buffer(), d.p,
                     std::move(*this));
             return;
 
         // got message
         case 1:
         {
+            if(d.p.need_more())
+            {
+                ec = http::error::partial_message;
+                goto upcall;
+            }
             // respond to request
             auto& ws = d.ws;
             auto req = std::move(d.req);
@@ -258,6 +265,7 @@ operator()(error_code const& ec,
         }
         }
     }
+upcall:
     d_.invoke(ec);
 }
 
@@ -295,11 +303,11 @@ async_accept(ConstBufferSequence const& bs, AcceptHandler&& handler)
 }
 
 template<class NextLayer>
-template<class Body, class Fields, class AcceptHandler>
+template<class Fields, class AcceptHandler>
 typename async_completion<
     AcceptHandler, void(error_code)>::result_type
 stream<NextLayer>::
-async_accept(http::request<Body, Fields> const& req,
+async_accept(http::header<true, Fields> const& req,
     AcceptHandler&& handler)
 {
     static_assert(is_AsyncStream<next_layer_type>::value,
@@ -372,18 +380,25 @@ accept(ConstBufferSequence const& buffers, error_code& ec)
     stream_.buffer().commit(buffer_copy(
         stream_.buffer().prepare(
             buffer_size(buffers)), buffers));
-    http::request<http::string_body> m;
-    http::read(next_layer(), stream_.buffer(), m, ec);
+    http::request_header m;
+    http::parser<true> p{m};
+    http::parse(next_layer(), stream_.buffer(), p, ec);
     if(ec)
         return;
+    if(p.need_more())
+    {
+        // VFALCO Is this the right error?
+        ec = http::error::partial_message;
+        return;
+    }
     accept(m, ec);
 }
 
 template<class NextLayer>
-template<class Body, class Fields>
+template<class Fields>
 void
 stream<NextLayer>::
-accept(http::request<Body, Fields> const& request)
+accept(http::header<true, Fields> const& request)
 {
     static_assert(is_SyncStream<next_layer_type>::value,
         "SyncStream requirements not met");
@@ -394,10 +409,10 @@ accept(http::request<Body, Fields> const& request)
 }
 
 template<class NextLayer>
-template<class Body, class Fields>
+template<class Fields>
 void
 stream<NextLayer>::
-accept(http::request<Body, Fields> const& req,
+accept(http::header<true, Fields> const& req,
     error_code& ec)
 {
     static_assert(is_SyncStream<next_layer_type>::value,
@@ -417,8 +432,6 @@ accept(http::request<Body, Fields> const& req,
     pmd_read(pmd_config_, req.fields);
     open(detail::role_type::server);
 }
-
-//------------------------------------------------------------------------------
 
 } // websocket
 } // beast

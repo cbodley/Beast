@@ -19,9 +19,9 @@ namespace beast {
 namespace websocket {
 namespace detail {
 
-using request_type = http::request<http::empty_body>;
+using request_type = http::request_header;
 
-using response_type = http::response<http::string_body>;
+using response_type = http::response_header;
 
 struct abstract_decorator
 {
