@@ -8,7 +8,6 @@
 #ifndef BEAST_WEBSOCKET_DETAIL_DECORATOR_HPP
 #define BEAST_WEBSOCKET_DETAIL_DECORATOR_HPP
 
-#include <beast/http/empty_body.hpp>
 #include <beast/http/message.hpp>
 #include <beast/http/string_body.hpp>
 #include <beast/version.hpp>
