@@ -28,6 +28,10 @@ protected:
 
         virtual
         void
+        move_to(void* p) = 0;
+
+        virtual
+        void
         on_field(
             boost::string_ref const&,
             boost::string_ref const&) = 0;
@@ -86,6 +90,12 @@ protected:
         }
 
         void
+        move_to(void* p) override
+        {
+            new(p) req_h_impl{std::move(*this)};
+        }
+
+        void
         on_req(
             boost::string_ref const& method,
             boost::string_ref const& path,
@@ -118,6 +128,12 @@ protected:
         res_h_impl(header<false, Fields>& h)
             : h_(h)
         {
+        }
+
+        void
+        move_to(void* p) override
+        {
+            new(p) res_h_impl{std::move(*this)};
         }
 
         void
@@ -154,6 +170,12 @@ protected:
         req_impl(message<true, Body, Fields>& m)
             : m_(m)
         {
+        }
+
+        void
+        move_to(void* p) override
+        {
+            new(p) req_impl{std::move(*this)};
         }
 
         void
@@ -210,6 +232,12 @@ protected:
         res_impl(message<false, Body, Fields>& m)
             : m_(m)
         {
+        }
+
+        void
+        move_to(void* p) override
+        {
+            new(p) res_impl{std::move(*this)};
         }
 
         void

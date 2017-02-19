@@ -34,6 +34,16 @@ class parser
     using impl_type = typename std::conditional<
         isRequest, req_impl_base, res_impl_base>::type;
 
+    // VFALCO What about alignment?
+    char buf_[sizeof(typename std::conditional<isRequest,
+        req_impl<
+            typename detail::parser_base::Body_exemplar,
+            typename detail::parser_base::Fields_exemplar>,
+        res_impl<
+            typename detail::parser_base::Body_exemplar,
+            typename detail::parser_base::Fields_exemplar>
+                >::type) + 4 * sizeof(void*)];
+    impl_type* impl_;
     std::unique_ptr<impl_type> p_;
 
 public:
@@ -42,6 +52,13 @@ public:
 
     /// Destructor
     ~parser();
+
+    /** Move constructor.
+
+        After the move, the only valid operation
+        on the moved-from object is destruction.
+    */
+    parser(parser&& other);
 
     /** Construct a parser to process a header.
 
@@ -67,13 +84,6 @@ public:
     template<class Body, class Fields>
     parser(message<isRequest, Body, Fields>& m);
 
-    /** Move constructor.
-
-        After the move, the only valid operation
-        on the moved-from object is destruction.
-    */
-    parser(parser&& other) = default;
-
     /// Copy constructor (disallowed)
     parser(parser const&) = delete;
 
@@ -83,10 +93,29 @@ public:
 private:
     friend class basic_parser<isRequest, parser>;
 
-    impl_type&
-    impl()
+    template<class T, class Arg>
+    void
+    alloc(Arg& arg, std::true_type)
     {
-        return *p_.get();
+        // type-pun
+        impl_ = new(buf_) T{arg};
+    }
+
+    template<class T, class Arg>
+    void
+    alloc(Arg& arg, std::false_type)
+    {
+        p_.reset(new T{arg});
+        impl_ = p_.get();
+    }
+
+    template<class T, class Arg>
+    void
+    alloc(Arg& arg)
+    {
+        alloc<T>(arg,
+            std::integral_constant<bool,
+                sizeof(T) <= sizeof(buf_)>{});
     }
 
     template<class Fields>
@@ -94,8 +123,7 @@ private:
     construct(header<true, Fields>& h)
     {
         this->split(true);
-        using type = req_h_impl<Fields>;
-        p_.reset(new type{h});
+        alloc<req_h_impl<Fields>>(h);
     }
 
     template<class Fields>
@@ -103,8 +131,7 @@ private:
     construct(header<false, Fields>& h)
     {
         this->split(true);
-        using type = res_h_impl<Fields>;
-        p_.reset(new type{h});
+        alloc<res_h_impl<Fields>>(h);
     }
 
     template<class Body, class Fields>
@@ -112,8 +139,7 @@ private:
     construct(message<true, Body, Fields>& m)
     {
         this->split(false);
-        using type = req_impl<Body, Fields>;
-        p_.reset(new type{m});
+        alloc<req_impl<Body, Fields>>(m);
     }
 
     template<class Body, class Fields>
@@ -121,8 +147,7 @@ private:
     construct(message<false, Body, Fields>& m)
     {
         this->split(false);
-        using type = res_impl<Body, Fields>;
-        p_.reset(new type{m});
+        alloc<res_impl<Body, Fields>>(m);
     }
 
     void
@@ -130,7 +155,7 @@ private:
         boost::string_ref const& path,
             int version, error_code&)
     {
-        impl().on_req(method, path, version);
+        impl_->on_req(method, path, version);
     }
 
     void
@@ -138,7 +163,7 @@ private:
         boost::string_ref const& reason,
             int version, error_code&)
     {
-        impl().on_res(status, reason, version);
+        impl_->on_res(status, reason, version);
     }
 
     void
@@ -146,13 +171,13 @@ private:
         boost::string_ref const& value,
             error_code&)
     {
-        impl().on_field(name, value);
+        impl_->on_field(name, value);
     }
 
     void
     on_header(error_code& ec)
     {
-        impl().on_header(ec);
+        impl_->on_header(ec);
     }
 
     void
@@ -166,40 +191,19 @@ private:
     on_body(boost::string_ref const& data,
         error_code& ec)
     {
-        impl().on_body(data, ec);
+        impl_->on_body(data, ec);
     }
 
     void
     on_done(error_code& ec)
     {
-        impl().on_done(ec);
+        impl_->on_done(ec);
     }
 };
 
-template<bool isRequest>
-parser<isRequest>::
-~parser()
-{
-    impl().~impl_type();
-}
-
-template<bool isRequest>
-template<class Fields>
-parser<isRequest>::
-parser(header<isRequest, Fields>& m)
-{
-    construct(m);
-}
-
-template<bool isRequest>
-template<class Body, class Fields>
-parser<isRequest>::
-parser(message<isRequest, Body, Fields>& m)
-{
-    construct(m);
-}
-
 } // http
 } // beast
+
+#include <beast/http/impl/parser.ipp>
 
 #endif
