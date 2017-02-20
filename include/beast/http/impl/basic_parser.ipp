@@ -45,6 +45,22 @@ basic_parser(basic_parser<
 }
 
 template<bool isRequest, class Derived>
+void
+basic_parser<isRequest, Derived>::
+set_option(skip_body const& opt)
+{
+    if(opt.value)
+    {
+        f_ |= flagSkipBody;
+        f_ &= ~flagHasBody;
+    }
+    else
+    {
+        f_ &= ~flagSkipBody;
+    }
+}
+
+template<bool isRequest, class Derived>
 bool
 basic_parser<isRequest, Derived>::
 need_more() const
@@ -54,8 +70,9 @@ need_more() const
     if(! (f_ & flagHasBody))
         return false;
     if(f_ & (
-            flagPauseBody  | flagOmitBody |
-            flagSplitParse | flagDone))
+            flagPauseBody  |
+            flagSplitParse |
+            flagDone))
         return false;
     return true;
 }
@@ -63,7 +80,7 @@ need_more() const
 template<bool isRequest, class Derived>
 bool
 basic_parser<isRequest, Derived>::
-keep_alive() const
+is_keep_alive() const
 {
     BOOST_ASSERT(got_header());
     if(f_ & flagHTTP11)
@@ -119,7 +136,7 @@ write(boost::asio::const_buffers_1 const& buffer,
         BOOST_ASSERT(got_header());
         s.remove_prefix(n);
     }
-    if(is_chunked())
+    if(f_ & flagChunked)
     {
         while(! is_done() && ! s.empty())
         {
@@ -661,7 +678,11 @@ do_header(int, std::true_type)
     // RFC 7230 section 3.3
     // https://tools.ietf.org/html/rfc7230#section-3.3
 
-    if(f_ & flagContentLength)
+    if(f_ & flagSkipBody)
+    {
+        f_ |= flagDone;
+    }
+    else if(f_ & flagContentLength)
     {
         if(len_ > 0)
             f_ |= flagHasBody;
@@ -686,7 +707,7 @@ do_header(int status, std::false_type)
     // RFC 7230 section 3.3
     // https://tools.ietf.org/html/rfc7230#section-3.3
 
-    if( (f_ & flagOmitBody) ||  // e.g. response to a HEAD request
+    if( (f_ & flagSkipBody) ||  // e.g. response to a HEAD request
         status  / 100 == 1 ||   // 1xx e.g. Continue
         status == 204 ||        // No Content
         status == 304)          // Not Modified
@@ -734,7 +755,7 @@ parse_body(char const* p,
     if(ec)
         return 0;
     len_ -= n;
-    if(len_ == 0 && ! is_chunked())
+    if(len_ == 0 && ! (f_ & flagChunked))
     {
         maybe_done(ec);
         if(ec)

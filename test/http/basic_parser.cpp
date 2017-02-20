@@ -225,7 +225,7 @@ public:
         void
         operator()(Parser const& p) const
         {
-            s_.BEAST_EXPECT(p.keep_alive() == v_);
+            s_.BEAST_EXPECT(p.is_keep_alive() == v_);
         }
     };
 
@@ -784,7 +784,7 @@ public:
             "\r\n",
             [&](test_parser<true> const& p)
             {
-                BEAST_EXPECT(p.upgrade());
+                BEAST_EXPECT(p.is_upgrade());
             });
     }
 

@@ -28,7 +28,7 @@ message_parser(header_parser<
     : base_type(std::move(static_cast<basic_parser<isRequest, header_parser<isRequest, Fields>>&>(parser)))
     , m_(parser.release(), std::forward<Args>(args)...)
 {
-    split(false);
+    this->split(false);
 }
 
 } // http

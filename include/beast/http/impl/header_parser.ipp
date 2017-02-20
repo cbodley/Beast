@@ -17,7 +17,7 @@ header_parser<isRequest, Fields>::
 header_parser(Args&&... args)
     : h_(std::forward<Args>(args)...)
 {
-    split(true);
+    this->split(true);
 }
 
 } // http

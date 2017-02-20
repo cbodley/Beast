@@ -236,7 +236,7 @@ class basic_parser
     friend class basic_parser;
 
     // Consider this message as having no body
-    static unsigned constexpr flagOmitBody              = 1<<  0;
+    static unsigned constexpr flagSkipBody              = 1<<  0;
 
     // Parser will pause after reading the header
     static unsigned constexpr flagPauseBody             = 1<<  1;
@@ -248,7 +248,7 @@ class basic_parser
     static unsigned constexpr flagGotSome               = 1<<  3;
 
     // Message semantics indicate a body is expected.
-    // Independent of flagOmitBody, flagPauseBody, or flagSplitParse
+    // cleared if flagOmitBody set
     //
     static unsigned constexpr flagHasBody               = 1<<  4;
 
@@ -269,10 +269,9 @@ class basic_parser
 
     static unsigned constexpr flagUpgrade               = 1<< 16;
 
+    std::uint64_t len_;     // size of chunk or body
     char* buf_ = nullptr;
     std::size_t buf_len_ = 0;
-
-    std::uint64_t len_;     // size of chunk or body
     std::size_t skip_ = 0;  // search from here
     std::size_t x_;         // scratch variable
     unsigned f_ = 0;        // flags
@@ -321,29 +320,23 @@ public:
             std::forward<An>(an)...);
     }
 
-    /// Set the body maximum size option
+    /// Set the @ref body_max_size option
     void
     set_option(body_max_size const& o)
     {
         // VFALCO TODO
     }
 
-    /// Set the header maximum size option
+    /// Set the @ref header_max_size option
     void
     set_option(header_max_size const& o)
     {
         // VFALCO TODO
     }
 
-    /// Set the skip body option.
+    /// Set the @ref skip_body option.
     void
-    set_option(skip_body const& opt)
-    {
-        if(opt.value)
-            f_ |= flagOmitBody;
-        else
-            f_ &= ~flagOmitBody;
-    }
+    set_option(skip_body const& opt);
 
     /** Returns `true` if the parser requires additional input.
 
@@ -389,12 +382,14 @@ public:
 
         @li The complete, expected body was parsed.
     */
+    // VFALCO Is this function needed?
     bool
     is_done() const
     {
         return (f_ & flagDone) != 0;
     }
 
+    // VFALCO Deprecated, remove
     unsigned
     flags() const
     {
@@ -425,7 +420,7 @@ public:
         header has been parsed.
     */
     bool
-    upgrade() const
+    is_upgrade() const
     {
         return (f_ & flagConnectionUpgrade) != 0;
     }
@@ -436,7 +431,7 @@ public:
         header has been parsed.
     */
     bool
-    keep_alive() const;
+    is_keep_alive() const;
 
     /** Write a sequence of buffers to the parser.
 
@@ -602,18 +597,6 @@ private:
     impl()
     {
         return *static_cast<Derived*>(this);
-    }
-
-    /** Returns `true` if the Transfer-Encoding specifies chunked
-
-        @note The return value is undefined unless a complete
-        header has been parsed.
-    */
-    bool
-    is_chunked() const
-    {
-        BOOST_ASSERT(got_header());
-        return (f_ & flagChunked) != 0;
     }
 
     template<class ConstBufferSequence>
