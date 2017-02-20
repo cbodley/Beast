@@ -19,19 +19,6 @@
 namespace beast {
 namespace http {
 
-/** Parse flags
-
-    The set of parser bit flags are returned by @ref basic_parser::flags.
-*/
-enum parse_flag
-{
-    chunked               =   1,
-    connection_keep_alive =   2,
-    connection_close      =   4,
-    connection_upgrade    =   8,
-    upgrade               =  16,
-};
-
 /** Body maximum size option.
 
     Sets the maximum number of cumulative bytes allowed including
@@ -407,24 +394,6 @@ public:
         return (f_ & flagMsgDone) != 0;
     }
 
-    // VFALCO Deprecated, remove
-    unsigned
-    flags() const
-    {
-        unsigned result = 0;
-        if(f_ & flagUpgrade)
-            result |= parse_flag::upgrade;
-        if(f_ & flagConnectionClose)
-            result |= parse_flag::connection_close;
-        if(f_ & flagConnectionKeepAlive)
-            result |= parse_flag::connection_keep_alive;
-        if(f_ & flagConnectionUpgrade)
-            result |= parse_flag::connection_upgrade;
-        if(f_ & flagChunked)
-            result |= parse_flag::chunked;
-        return result;
-    }
-
     /// Returns `true` if the complete header has been parsed.
     bool
     got_header() const
@@ -434,8 +403,8 @@ public:
 
     /** Returns `true` if the message is an upgrade message.
 
-        @note The return value is undefined unless a complete
-        header has been parsed.
+        @note The return value is undefined unless
+            @ref got_header would return `true`.
     */
     bool
     is_upgrade() const
@@ -445,11 +414,22 @@ public:
 
     /** Returns `true` if keep-alive is specified
 
-        @note The return value is undefined unless a complete
-        header has been parsed.
+        @note The return value is undefined unless
+            @ref got_header would return `true`.
     */
     bool
     is_keep_alive() const;
+
+    /** Returns `true` if the chunked Transfer-Encoding is specified.
+
+        @note The return value is undefined unless
+            @ref got_header would return `true`.
+    */
+    bool
+    is_chunked() const
+    {
+        return (f_ & flagChunked) != 0;
+    }
 
     /** Write a sequence of buffers to the parser.
 
@@ -458,7 +438,7 @@ public:
         positive return value indicates that the parser
         made forward progress, consuming that number of
         bytes.
-        
+
         A return value of zero indicates that the parser
         requires additional input. In this case the caller
         should append additional bytes to the input buffer

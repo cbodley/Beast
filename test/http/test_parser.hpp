@@ -46,6 +46,12 @@ public:
     }
 
     void
+    split(bool option)
+    {
+        basic_parser::split(option);
+    }
+
+    void
     on_begin_request(
         boost::string_ref const& method_,
             boost::string_ref const& path_,
