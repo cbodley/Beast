@@ -72,7 +72,7 @@ need_more() const
     if(f_ & (
             flagPauseBody  |
             flagSplitParse |
-            flagEndMessage))
+            flagMsgDone))
         return false;
     return true;
 }
@@ -135,6 +135,14 @@ write(boost::asio::const_buffers_1 const& buffer,
         BOOST_ASSERT(! ec);
         BOOST_ASSERT(got_header());
         s.remove_prefix(n);
+
+        if(f_ & flagMsgDone)
+        {
+            impl().on_end_message(ec);
+            if(ec)
+                return 0;
+            goto done;
+        }
     }
 
     if(! (f_ & flagHasBody))
@@ -142,8 +150,17 @@ write(boost::asio::const_buffers_1 const& buffer,
     if(f_ & (
             flagPauseBody  |
             flagSplitParse |
-            flagEndMessage))
+            flagMsgDone))
         goto done;
+
+    if(! (f_ & flagBeginBody))
+    {
+        impl().on_begin_body(ec);
+        if(ec)
+            return 0;
+        f_ |= flagBeginBody;
+    }
+
     if(f_ & flagChunked)
     {
         while(! is_done() && ! s.empty())
@@ -199,7 +216,7 @@ write_eof(error_code& ec)
     }
     if(f_ & (flagContentLength | flagChunked))
     {
-        if(! (f_ & flagEndMessage))
+        if(! (f_ & flagMsgDone))
         {
             ec = error::partial_message;
             return;
@@ -266,7 +283,7 @@ split(bool value)
         {
             f_ &= ~flagSplitParse;
             if(f_ & flagHasBody)
-                f_ &= ~flagEndMessage;
+                f_ &= ~flagMsgDone;
         }
     }
 }
@@ -678,14 +695,14 @@ do_header(int, std::true_type)
 
     if(f_ & flagSkipBody)
     {
-        f_ |= flagEndMessage;
+        f_ |= flagMsgDone;
     }
     else if(f_ & flagContentLength)
     {
         if(len_ > 0)
             f_ |= flagHasBody;
         else
-            f_ |= flagEndMessage;
+            f_ |= flagMsgDone;
     }
     else if(f_ & flagChunked)
     {
@@ -693,7 +710,7 @@ do_header(int, std::true_type)
     }
     else
     {
-        f_ |= flagEndMessage;
+        f_ |= flagMsgDone;
     }
 }
 
@@ -710,7 +727,7 @@ do_header(int status, std::false_type)
         status == 204 ||        // No Content
         status == 304)          // Not Modified
     {
-        f_ |= flagEndMessage;
+        f_ |= flagMsgDone;
         return;
     }
 
@@ -719,7 +736,7 @@ do_header(int status, std::false_type)
         if(len_ > 0)
             f_ |= flagHasBody;
         else
-            f_ |= flagEndMessage;
+            f_ |= flagMsgDone;
     }
     else if(f_ & flagChunked)
     {
@@ -905,10 +922,16 @@ void
 basic_parser<isRequest, Derived>::
 do_end_message(error_code& ec)
 {
+    if(f_ & flagHasBody)
+    {
+        impl().on_end_body(ec);
+        if(ec)
+            return;
+    }
     impl().on_end_message(ec);
     if(ec)
         return;
-    f_ |= flagEndMessage;
+    f_ |= flagMsgDone;
 }
 
 } // http

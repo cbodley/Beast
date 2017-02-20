@@ -267,22 +267,25 @@ class basic_parser
     //
     static unsigned constexpr flagHasBody               = 1<<  4;
 
-    static unsigned constexpr flagEndMessage            = 1<<  5;
-    static unsigned constexpr flagGotHeader             = 1<<  6;
-    static unsigned constexpr flagHTTP11                = 1<<  7;
-    static unsigned constexpr flagNeedEOF               = 1<<  8;
-    static unsigned constexpr flagExpectCRLF            = 1<<  9;
-    static unsigned constexpr flagFinalChunk            = 1<< 10;
+    // on_begin_body was called
+    static unsigned constexpr flagBeginBody             = 1<<  5;
 
-    static unsigned constexpr flagConnectionClose       = 1<< 11;
-    static unsigned constexpr flagConnectionUpgrade     = 1<< 12;
-    static unsigned constexpr flagConnectionKeepAlive   = 1<< 13;
+    static unsigned constexpr flagMsgDone               = 1<<  6;
+    static unsigned constexpr flagGotHeader             = 1<<  7;
+    static unsigned constexpr flagHTTP11                = 1<<  8;
+    static unsigned constexpr flagNeedEOF               = 1<<  9;
+    static unsigned constexpr flagExpectCRLF            = 1<< 10;
+    static unsigned constexpr flagFinalChunk            = 1<< 11;
 
-    static unsigned constexpr flagContentLength         = 1<< 14;
+    static unsigned constexpr flagConnectionClose       = 1<< 12;
+    static unsigned constexpr flagConnectionUpgrade     = 1<< 13;
+    static unsigned constexpr flagConnectionKeepAlive   = 1<< 14;
 
-    static unsigned constexpr flagChunked               = 1<< 15;
+    static unsigned constexpr flagContentLength         = 1<< 15;
 
-    static unsigned constexpr flagUpgrade               = 1<< 16;
+    static unsigned constexpr flagChunked               = 1<< 16;
+
+    static unsigned constexpr flagUpgrade               = 1<< 17;
 
     std::uint64_t len_;     // size of chunk or body
     char* buf_ = nullptr;
@@ -401,7 +404,7 @@ public:
     bool
     is_done() const
     {
-        return (f_ & flagEndMessage) != 0;
+        return (f_ & flagMsgDone) != 0;
     }
 
     // VFALCO Deprecated, remove
@@ -644,7 +647,7 @@ private:
         std::size_t n, error_code& ec);
 
     void
-    do_header(int status, std::true_type);
+    do_header(int, std::true_type);
 
     void
     do_header(int status, std::false_type);
