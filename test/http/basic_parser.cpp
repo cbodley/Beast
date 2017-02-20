@@ -8,6 +8,8 @@
 // Test that header file is self-contained.
 #include <beast/http/basic_parser.hpp>
 
+#include "test_parser.hpp"
+
 #include <beast/core/buffer_cat.hpp>
 #include <beast/core/streambuf.hpp>
 #include <beast/unit_test/suite.hpp>
@@ -18,162 +20,6 @@ namespace http {
 class basic_parser_test : public beast::unit_test::suite
 {
 public:
-    template<bool isRequest>
-    struct cb_checker
-        : public basic_parser<
-            isRequest, cb_checker<isRequest>>
-    {
-        bool on_begin_message_ = false;
-        bool on_field_ = false;
-        bool on_end_header_ = false;
-        bool on_begin_body_ = false;
-        bool on_chunk_ = false;
-        bool on_body_ = false;
-        bool on_end_body_ = false;
-        bool on_end_message_ = false;
-
-    private:
-        friend class basic_parser<
-            isRequest, cb_checker<isRequest>>;
-
-        void
-        on_begin_request(boost::string_ref const& method,
-            boost::string_ref const& path,
-                int version, error_code&)
-        {
-            on_begin_message_ = true;
-        }
-
-        void
-        on_begin_response(int status,
-            boost::string_ref const& reason,
-                int version, error_code&)
-        {
-            on_begin_message_ = true;
-        }
-
-        void
-        on_field(boost::string_ref const& name,
-            boost::string_ref const& value,
-                error_code&)
-        {
-            on_field_ = true;
-        }
-
-        void
-        on_end_header(error_code& ec)
-        {
-            on_end_header_ = true;
-        }
-
-        void
-        on_begin_body(error_code& ec)
-        {
-            on_begin_body_ = true;
-        }
-
-        void
-        on_chunk(std::uint64_t length,
-            boost::string_ref const& ext,
-                error_code&)
-        {
-            on_chunk_ = true;
-        }
-
-        void
-        on_body(boost::string_ref const& data,
-            error_code& ec)
-        {
-            on_body_ = true;
-        }
-
-        void
-        on_end_body(error_code& ec)
-        {
-            on_end_body_ = true;
-        }
-
-        void
-        on_end_message(error_code&)
-        {
-            on_end_message_ = true;
-        }
-    };
-
-    template<bool isRequest>
-    class test_parser :
-        public basic_parser<isRequest,
-            test_parser<isRequest>>
-    {
-    public:
-        int status;
-        int version;
-        std::string body;
-
-    private:
-        friend basic_parser<isRequest,
-            test_parser<isRequest>>;
-
-        void
-        on_begin_request(
-            boost::string_ref const& method,
-                boost::string_ref const& path,
-                    int version0, error_code&)
-        {
-            version = version0;
-        }
-
-        void
-        on_begin_response(int status0,
-            boost::string_ref const& reason,
-                int version0, error_code& ec)
-        {
-            status = status0;
-            version = version0;
-        }
-
-        void
-        on_field(boost::string_ref const& name,
-            boost::string_ref const& value,
-                error_code&)
-        {
-        }
-
-        void
-        on_end_header(error_code&)
-        {
-        }
-
-        void
-        on_begin_body(error_code& ec)
-        {
-        }
-
-        void
-        on_chunk(std::uint64_t length,
-            boost::string_ref const& ext,
-                error_code&)
-        {
-        }
-
-        void
-        on_body(boost::string_ref const& in,
-            error_code& ec)
-        {
-            body.append(in.data(), in.size());
-        }
-
-        void
-        on_end_body(error_code& ec)
-        {
-        }
-
-        void
-        on_end_message(error_code&)
-        {
-        }
-    };
-
     class expect_version
     {
         suite& s_;
@@ -390,7 +236,7 @@ public:
     {
         using boost::asio::buffer;
         {
-            cb_checker<true> p;
+            test_parser<true> p;
             error_code ec;
             std::string const s =
                 "GET / HTTP/1.1\r\n"
@@ -402,17 +248,17 @@ public:
             BEAST_EXPECTS(! ec, ec.message());
             BEAST_EXPECT(! p.need_more());
             BEAST_EXPECT(p.is_done());
-            BEAST_EXPECT(p.on_begin_message_);
-            BEAST_EXPECT(p.on_field_);
-            BEAST_EXPECT(p.on_end_header_);
-            BEAST_EXPECT(p.on_begin_body_);
-            BEAST_EXPECT(p.on_body_);
-            BEAST_EXPECT(! p.on_chunk_);
-            BEAST_EXPECT(p.on_end_body_);
-            BEAST_EXPECT(p.on_end_message_);
+            BEAST_EXPECT(p.got_on_begin_message);
+            BEAST_EXPECT(p.got_on_field);
+            BEAST_EXPECT(p.got_on_end_header);
+            BEAST_EXPECT(p.got_on_begin_body);
+            BEAST_EXPECT(! p.got_on_chunk);
+            BEAST_EXPECT(p.got_on_body);
+            BEAST_EXPECT(p.got_on_end_body);
+            BEAST_EXPECT(p.got_on_end_message);
         }
         {
-            cb_checker<false> p;
+            test_parser<false> p;
             error_code ec;
             std::string const s =
                 "HTTP/1.1 200 OK\r\n"
@@ -424,14 +270,14 @@ public:
             BEAST_EXPECTS(! ec, ec.message());
             BEAST_EXPECT(! p.need_more());
             BEAST_EXPECT(p.is_done());
-            BEAST_EXPECT(p.on_begin_message_);
-            BEAST_EXPECT(p.on_field_);
-            BEAST_EXPECT(p.on_end_header_);
-            BEAST_EXPECT(p.on_begin_body_);
-            BEAST_EXPECT(p.on_body_);
-            BEAST_EXPECT(! p.on_chunk_);
-            BEAST_EXPECT(p.on_end_body_);
-            BEAST_EXPECT(p.on_end_message_);
+            BEAST_EXPECT(p.got_on_begin_message);
+            BEAST_EXPECT(p.got_on_field);
+            BEAST_EXPECT(p.got_on_end_header);
+            BEAST_EXPECT(p.got_on_begin_body);
+            BEAST_EXPECT(! p.got_on_chunk);
+            BEAST_EXPECT(p.got_on_body);
+            BEAST_EXPECT(p.got_on_end_body);
+            BEAST_EXPECT(p.got_on_end_message);
         }
     }
 

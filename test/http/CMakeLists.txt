@@ -8,7 +8,7 @@ add_executable (http-tests
     ${BEAST_INCLUDES}
     ${EXTRAS_INCLUDES}
     message_fuzz.hpp
-    fail_parser.hpp
+    test_parser.hpp
     ../../extras/beast/unit_test/main.cpp
     basic_dynabuf_body.cpp
     basic_fields.cpp

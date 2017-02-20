@@ -8,7 +8,7 @@
 // Test that header file is self-contained.
 #include <beast/http/message_parser.hpp>
 
-#include "fail_parser.hpp"
+#include "test_parser.hpp"
 
 #include <beast/unit_test/suite.hpp>
 #include <beast/test/string_istream.hpp>

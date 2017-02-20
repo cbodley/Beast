@@ -8,7 +8,7 @@
 // Test that header file is self-contained.
 #include <beast/http/read.hpp>
 
-#include "fail_parser.hpp"
+#include "test_parser.hpp"
 
 #include <beast/http/fields.hpp>
 #include <beast/http/header_parser.hpp>
@@ -119,7 +119,7 @@ public:
             test::fail_counter fc(n);
             test::fail_stream<
                 test::string_istream> fs{fc, ios_, ""};
-            fail_parser<isRequest> p(fc);
+            test_parser<isRequest> p(fc);
             error_code ec;
             parse(fs, sb, p, ec);
             if(! ec)
@@ -135,7 +135,7 @@ public:
             test::fail_counter fc(n);
             test::fail_stream<test::string_istream> fs{
                 fc, ios_, std::string{s + pre, len - pre}};
-            fail_parser<isRequest> p(fc);
+            test_parser<isRequest> p(fc);
             error_code ec;
             parse(fs, sb, p, ec);
             if(! ec)
@@ -150,7 +150,7 @@ public:
             test::fail_counter fc(n);
             test::fail_stream<
                 test::string_istream> fs{fc, ios_, ""};
-            fail_parser<isRequest> p(fc);
+            test_parser<isRequest> p(fc);
             error_code ec;
             async_parse(fs, sb, p, do_yield[ec]);
             if(! ec)
@@ -166,7 +166,7 @@ public:
             test::fail_counter fc(n);
             test::fail_stream<test::string_istream> fs{
                 fc, ios_, std::string{s + pre, len - pre}};
-            fail_parser<isRequest> p(fc);
+            test_parser<isRequest> p(fc);
             error_code ec;
             async_parse(fs, sb, p, do_yield[ec]);
             if(! ec)
