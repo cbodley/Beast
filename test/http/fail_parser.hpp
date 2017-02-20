@@ -33,7 +33,7 @@ public:
     }
 
     void
-    on_request(boost::string_ref const&,
+    on_begin_request(boost::string_ref const&,
         boost::string_ref const&,
             int, error_code& ec)
     {
@@ -41,7 +41,7 @@ public:
     }
 
     void
-    on_response(
+    on_begin_response(
         int, boost::string_ref const&,
             int, error_code& ec)
     {
@@ -57,7 +57,13 @@ public:
     }
 
     void
-    on_header(error_code& ec)
+    on_end_header(error_code& ec)
+    {
+        fc_.fail(ec);
+    }
+
+    void
+    on_begin_body(error_code& ec)
     {
         fc_.fail(ec);
     }
@@ -80,7 +86,14 @@ public:
     }
 
     void
-    on_done(error_code& ec)
+    on_end_body(error_code& ec)
+    {
+        if(fc_.fail(ec))
+            return;
+    }
+
+    void
+    on_end_message(error_code& ec)
     {
         if(fc_.fail(ec))
             return;

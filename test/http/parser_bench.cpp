@@ -109,14 +109,14 @@ public:
         isRequest, test_parser<isRequest, Body, Fields>>
     {
         void
-        on_request(boost::string_ref const&,
+        on_begin_request(boost::string_ref const&,
             boost::string_ref const&,
                 int, error_code&)
         {
         }
 
         void
-        on_response(int,
+        on_begin_response(int,
             boost::string_ref const&,
                 int, error_code&)
         {
@@ -130,7 +130,12 @@ public:
         }
 
         void
-        on_header(error_code& ec)
+        on_end_header(error_code& ec)
+        {
+        }
+
+        void
+        on_begin_body(error_code& ec)
         {
         }
 
@@ -148,7 +153,12 @@ public:
         }
 
         void
-        on_done(error_code&)
+        on_end_body(error_code&)
+        {
+        }
+
+        void
+        on_end_message(error_code&)
         {
         }
     };

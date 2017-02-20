@@ -72,7 +72,7 @@ need_more() const
     if(f_ & (
             flagPauseBody  |
             flagSplitParse |
-            flagDone))
+            flagEndMessage))
         return false;
     return true;
 }
@@ -136,6 +136,14 @@ write(boost::asio::const_buffers_1 const& buffer,
         BOOST_ASSERT(got_header());
         s.remove_prefix(n);
     }
+
+    if(! (f_ & flagHasBody))
+        goto done;
+    if(f_ & (
+            flagPauseBody  |
+            flagSplitParse |
+            flagEndMessage))
+        goto done;
     if(f_ & flagChunked)
     {
         while(! is_done() && ! s.empty())
@@ -170,6 +178,7 @@ write(boost::asio::const_buffers_1 const& buffer,
             s.remove_prefix(n);
         }
     }
+done:
     return s0.size() - s.size();
 }
 
@@ -190,14 +199,14 @@ write_eof(error_code& ec)
     }
     if(f_ & (flagContentLength | flagChunked))
     {
-        if(! (f_ & flagDone))
+        if(! (f_ & flagEndMessage))
         {
             ec = error::partial_message;
             return;
         }
         return;
     }
-    maybe_done(ec);
+    do_end_message(ec);
     if(ec)
         return;
 }
@@ -226,7 +235,7 @@ write_body(Reader& r,
         len_ -= len;
         if(len_ == 0)
         {
-            maybe_done(ec);
+            do_end_message(ec);
             if(ec)
                 return;
         }
@@ -257,7 +266,7 @@ split(bool value)
         {
             f_ &= ~flagSplitParse;
             if(f_ & flagHasBody)
-                f_ &= ~flagDone;
+                f_ &= ~flagEndMessage;
         }
     }
 }
@@ -303,17 +312,6 @@ maybe_flatten(
 template<bool isRequest, class Derived>
 void
 basic_parser<isRequest, Derived>::
-maybe_done(error_code& ec)
-{
-    impl().on_done(ec);
-    if(ec)
-        return;
-    f_ |= flagDone;
-}
-
-template<bool isRequest, class Derived>
-void
-basic_parser<isRequest, Derived>::
 parse_startline(char const*& it,
     int& version, int& status,
         error_code& ec, std::true_type)
@@ -353,7 +351,7 @@ parse_startline(char const*& it,
         return;
     }
 
-    impl().on_request(
+    impl().on_begin_request(
         method, path, version, ec);
     if(ec)
         return;
@@ -394,7 +392,7 @@ parse_startline(char const*& it,
         return;
     }
 
-    impl().on_response(
+    impl().on_begin_response(
         status, reason, version, ec);
     if(ec)
         return;
@@ -661,10 +659,10 @@ parse_header(char const* p,
         return 0;
     BOOST_ASSERT(p == term);
 
-    f_ |= flagGotHeader; // set before on_header
+    f_ |= flagGotHeader;
     do_header(status, std::integral_constant<
         bool, isRequest>{});
-    impl().on_header(ec);
+    impl().on_end_header(ec);
     if(ec)
         return 0;
     return n;
@@ -680,14 +678,14 @@ do_header(int, std::true_type)
 
     if(f_ & flagSkipBody)
     {
-        f_ |= flagDone;
+        f_ |= flagEndMessage;
     }
     else if(f_ & flagContentLength)
     {
         if(len_ > 0)
             f_ |= flagHasBody;
         else
-            f_ |= flagDone;
+            f_ |= flagEndMessage;
     }
     else if(f_ & flagChunked)
     {
@@ -695,7 +693,7 @@ do_header(int, std::true_type)
     }
     else
     {
-        f_ |= flagDone;
+        f_ |= flagEndMessage;
     }
 }
 
@@ -712,7 +710,7 @@ do_header(int status, std::false_type)
         status == 204 ||        // No Content
         status == 304)          // Not Modified
     {
-        f_ |= flagDone;
+        f_ |= flagEndMessage;
         return;
     }
 
@@ -721,7 +719,7 @@ do_header(int status, std::false_type)
         if(len_ > 0)
             f_ |= flagHasBody;
         else
-            f_ |= flagDone;
+            f_ |= flagEndMessage;
     }
     else if(f_ & flagChunked)
     {
@@ -757,7 +755,7 @@ parse_body(char const* p,
     len_ -= n;
     if(len_ == 0 && ! (f_ & flagChunked))
     {
-        maybe_done(ec);
+        do_end_message(ec);
         if(ec)
             return 0;
     }
@@ -896,10 +894,21 @@ parse_chunk(char const* p,
         return 0;
     BOOST_ASSERT(p == term);
 
-    maybe_done(ec);
+    do_end_message(ec);
     if(ec)
         return 0;
     return p - first;
+}
+
+template<bool isRequest, class Derived>
+void
+basic_parser<isRequest, Derived>::
+do_end_message(error_code& ec)
+{
+    impl().on_end_message(ec);
+    if(ec)
+        return;
+    f_ |= flagEndMessage;
 }
 
 } // http

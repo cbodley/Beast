@@ -23,31 +23,33 @@ public:
         : public basic_parser<
             isRequest, cb_checker<isRequest>>
     {
-        bool on_start_ = false;
+        bool on_begin_message_ = false;
         bool on_field_ = false;
-        bool on_header_ = false;
+        bool on_end_header_ = false;
+        bool on_begin_body_ = false;
         bool on_chunk_ = false;
         bool on_body_ = false;
-        bool on_done_ = false;
+        bool on_end_body_ = false;
+        bool on_end_message_ = false;
 
     private:
         friend class basic_parser<
             isRequest, cb_checker<isRequest>>;
 
         void
-        on_request(boost::string_ref const& method,
+        on_begin_request(boost::string_ref const& method,
             boost::string_ref const& path,
                 int version, error_code&)
         {
-            on_start_ = true;
+            on_begin_message_ = true;
         }
 
         void
-        on_response(int status,
+        on_begin_response(int status,
             boost::string_ref const& reason,
                 int version, error_code&)
         {
-            on_start_ = true;
+            on_begin_message_ = true;
         }
 
         void
@@ -59,9 +61,15 @@ public:
         }
 
         void
-        on_header(error_code& ec)
+        on_end_header(error_code& ec)
         {
-            on_header_ = true;
+            on_end_header_ = true;
+        }
+
+        void
+        on_begin_body(error_code& ec)
+        {
+            on_begin_body_ = true;
         }
 
         void
@@ -80,9 +88,15 @@ public:
         }
 
         void
-        on_done(error_code& ec)
+        on_end_body(error_code& ec)
         {
-            on_done_ = true;
+            on_end_body_ = true;
+        }
+
+        void
+        on_end_message(error_code&)
+        {
+            on_end_message_ = true;
         }
     };
 
@@ -101,15 +115,16 @@ public:
             test_parser<isRequest>>;
 
         void
-        on_request(boost::string_ref const& method,
-            boost::string_ref const& path,
-                int version0, error_code&)
+        on_begin_request(
+            boost::string_ref const& method,
+                boost::string_ref const& path,
+                    int version0, error_code&)
         {
             version = version0;
         }
 
         void
-        on_response(int status0,
+        on_begin_response(int status0,
             boost::string_ref const& reason,
                 int version0, error_code& ec)
         {
@@ -125,7 +140,12 @@ public:
         }
 
         void
-        on_header(error_code&)
+        on_end_header(error_code&)
+        {
+        }
+
+        void
+        on_begin_body(error_code& ec)
         {
         }
 
@@ -144,7 +164,12 @@ public:
         }
 
         void
-        on_done(error_code&)
+        on_end_body(error_code& ec)
+        {
+        }
+
+        void
+        on_end_message(error_code&)
         {
         }
     };
@@ -377,12 +402,14 @@ public:
             BEAST_EXPECTS(! ec, ec.message());
             BEAST_EXPECT(! p.need_more());
             BEAST_EXPECT(p.is_done());
-            BEAST_EXPECT(p.on_start_);
+            BEAST_EXPECT(p.on_begin_message_);
             BEAST_EXPECT(p.on_field_);
-            BEAST_EXPECT(p.on_header_);
+            BEAST_EXPECT(p.on_end_header_);
+            BEAST_EXPECT(p.on_begin_body_);
             BEAST_EXPECT(p.on_body_);
             BEAST_EXPECT(! p.on_chunk_);
-            BEAST_EXPECT(p.on_done_);
+            BEAST_EXPECT(p.on_end_body_);
+            BEAST_EXPECT(p.on_end_message_);
         }
         {
             cb_checker<false> p;
@@ -397,12 +424,14 @@ public:
             BEAST_EXPECTS(! ec, ec.message());
             BEAST_EXPECT(! p.need_more());
             BEAST_EXPECT(p.is_done());
-            BEAST_EXPECT(p.on_start_);
+            BEAST_EXPECT(p.on_begin_message_);
             BEAST_EXPECT(p.on_field_);
-            BEAST_EXPECT(p.on_header_);
+            BEAST_EXPECT(p.on_end_header_);
+            BEAST_EXPECT(p.on_begin_body_);
             BEAST_EXPECT(p.on_body_);
             BEAST_EXPECT(! p.on_chunk_);
-            BEAST_EXPECT(p.on_done_);
+            BEAST_EXPECT(p.on_end_body_);
+            BEAST_EXPECT(p.on_end_message_);
         }
     }
 

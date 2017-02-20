@@ -156,21 +156,21 @@ struct body_info
     struct derived
         : basic_parser<isRequest, derived<isRequest>>
     {
-        // Called when the Request Line is received.
+        // Called first when the Request Line is received.
         // Only called when isRequest == true.
         //
         void
-        on_request(
+        on_begin_request(
             boost::string_ref const& method,
             boost::string_ref const& path,
             int version,
             error_code& ec);
 
-        // Called when the Status Line is received
+        // Called first when the Status Line is received
         // Only called when isRequest == false.
         //
         void
-        on_response(
+        on_begin_response(
             int status,
             boost::string_ref const& reason,
             int version,
@@ -184,10 +184,18 @@ struct body_info
             boost::string_ref const& value,
             error_code& ec);
 
-        // Called after the complete header is received.
+        // Called once after the header is complete.
         //
         void
-        on_header(error_code& ec);
+        on_end_header(error_code& ec);
+
+        // Called once before the body, if any, is started.
+        // This will only be called if the semantics of the
+        // message indicate that a body exists, including
+        // an indicated body of zero length.
+        //
+        void
+        on_begin_body(error_code& ec);
 
         // Called at the beginning of each chunk and final
         // chunk, when Transfer-Encoding specifies chunked.
@@ -207,12 +215,19 @@ struct body_info
             boost::string_ref const& data,
             error_code& ec);
 
-        // Called once when the entire message is received.
-        // If the skip body option is set, this will be called
-        // immediately after receiving a complete header.
+        // Called once after the full body is received.
+        // This will only be called if the semantics of the
+        // message indicate that a body exists, including
+        // an indicated body of zero length.
         //
         void
-        on_done(error_code& ec);
+        on_end_body(error_code& ec);
+
+        // Called once when the message is complete.
+        // This will be called even if there is no body.
+        //
+        void
+        on_end_message(error_code& ec);
     };
     @endcode
 
@@ -252,7 +267,7 @@ class basic_parser
     //
     static unsigned constexpr flagHasBody               = 1<<  4;
 
-    static unsigned constexpr flagDone                  = 1<<  5;
+    static unsigned constexpr flagEndMessage            = 1<<  5;
     static unsigned constexpr flagGotHeader             = 1<<  6;
     static unsigned constexpr flagHTTP11                = 1<<  7;
     static unsigned constexpr flagNeedEOF               = 1<<  8;
@@ -386,7 +401,7 @@ public:
     bool
     is_done() const
     {
-        return (f_ & flagDone) != 0;
+        return (f_ & flagEndMessage) != 0;
     }
 
     // VFALCO Deprecated, remove
@@ -605,9 +620,6 @@ private:
         ConstBufferSequence const& buffers);
 
     void
-    maybe_done(error_code& ec);
-
-    void
     parse_startline(char const*& it,
         int& version, int& status,
             error_code& ec, std::true_type);
@@ -644,6 +656,9 @@ private:
     std::size_t
     parse_chunk(char const* p,
         std::size_t n, error_code& ec);
+
+    void
+    do_end_message(error_code& ec);
 };
 
 } // http

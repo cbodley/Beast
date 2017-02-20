@@ -147,9 +147,10 @@ private:
     friend class basic_parser<isRequest, message_parser>;
 
     void
-    on_request(boost::string_ref const& method,
-        boost::string_ref const& path,
-            int version, error_code&)
+    on_begin_request(
+        boost::string_ref const& method,
+            boost::string_ref const& path,
+                int version, error_code&)
     {
         m_.url = std::string{
             path.data(), path.size()};
@@ -159,7 +160,7 @@ private:
     }
 
     void
-    on_response(int status,
+    on_begin_response(int status,
         boost::string_ref const& reason,
             int version, error_code&)
     {
@@ -178,7 +179,12 @@ private:
     }
 
     void
-    on_header(error_code& ec)
+    on_end_header(error_code& ec)
+    {
+    }
+
+    void
+    on_begin_body(error_code& ec)
     {
         r_.emplace(m_);
         r_->init(this->content_length(), ec);
@@ -210,9 +216,14 @@ private:
     }
 
     void
-    on_done(error_code& ec)
+    on_end_body(error_code& ec)
     {
         r_->finish(ec);
+    }
+
+    void
+    on_end_message(error_code& ec)
+    {
     }
 };
 
