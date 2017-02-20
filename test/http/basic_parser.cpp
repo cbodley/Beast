@@ -824,6 +824,60 @@ public:
             error::partial_message);
     }
 
+    template<bool isRequest>
+    void
+    check_header(
+        test_parser<isRequest> const& p)
+    {
+        BEAST_EXPECT(p.got_on_begin_message);
+        BEAST_EXPECT(p.got_on_field);
+        BEAST_EXPECT(p.got_on_end_header);
+        BEAST_EXPECT(! p.got_on_begin_body);
+        BEAST_EXPECT(! p.got_on_chunk);
+        BEAST_EXPECT(! p.got_on_body);
+        BEAST_EXPECT(! p.got_on_end_body);
+        BEAST_EXPECT(! p.got_on_end_message);
+        BEAST_EXPECT(p.got_header());
+    }
+
+    void
+    testSplit()
+    {
+        streambuf sb;
+        sb << 
+            "POST / HTTP/1.1\r\n"
+            "Content-Length: 5\r\n"
+            "\r\n"
+            "*****";
+        error_code ec;
+        test_parser<true> p;
+        p.split(true);
+        auto n = p.write(sb.data(), ec);
+        BEAST_EXPECTS(! ec, ec.message());
+        BEAST_EXPECT(p.got_on_begin_message);
+        BEAST_EXPECT(p.got_on_field);
+        BEAST_EXPECT(p.got_on_end_header);
+        BEAST_EXPECT(! p.got_on_begin_body);
+        BEAST_EXPECT(! p.got_on_chunk);
+        BEAST_EXPECT(! p.got_on_body);
+        BEAST_EXPECT(! p.got_on_end_body);
+        BEAST_EXPECT(! p.got_on_end_message);
+        BEAST_EXPECT(p.got_header());
+        sb.consume(n);
+        p.split(false);
+        n = p.write(sb.data(), ec);
+        BEAST_EXPECTS(! ec, ec.message());
+        BEAST_EXPECT(p.got_on_begin_message);
+        BEAST_EXPECT(p.got_on_field);
+        BEAST_EXPECT(p.got_on_end_header);
+        BEAST_EXPECT(p.got_on_begin_body);
+        BEAST_EXPECT(! p.got_on_chunk);
+        BEAST_EXPECT(p.got_on_body);
+        BEAST_EXPECT(p.got_on_end_body);
+        BEAST_EXPECT(p.got_on_end_message);
+        BEAST_EXPECT(p.is_done());
+    }
+
     void
     run() override
     {
@@ -837,6 +891,7 @@ public:
         testTransferEncodingField();
         testUpgradeField();
         testBody();
+        testSplit();
     }
 };
 

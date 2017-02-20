@@ -48,7 +48,8 @@ public:
     void
     split(bool option)
     {
-        basic_parser::split(option);
+        basic_parser<isRequest,
+            test_parser<isRequest>>::split(option);
     }
 
     void
