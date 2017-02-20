@@ -183,7 +183,7 @@ public:
         header_parser<true, fields> p0;
         parse(ss, sb, p0, ec);
         BEAST_EXPECTS(! ec, ec.message());
-        BEAST_EXPECT(p0.have_header());
+        BEAST_EXPECT(p0.got_header());
         BEAST_EXPECT(! p0.is_done());
         message_parser<true,
             string_body, fields> p1{std::move(p0)};

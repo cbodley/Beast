@@ -247,11 +247,13 @@ class basic_parser
     // The parser has read at least one byte
     static unsigned constexpr flagGotSome               = 1<<  3;
 
-    // Message semantics indicate a body is expected
+    // Message semantics indicate a body is expected.
+    // Independent of flagOmitBody, flagPauseBody, or flagSplitParse
+    //
     static unsigned constexpr flagHasBody               = 1<<  4;
 
     static unsigned constexpr flagDone                  = 1<<  5;
-    static unsigned constexpr flagHaveHeader            = 1<<  6;
+    static unsigned constexpr flagGotHeader             = 1<<  6;
     static unsigned constexpr flagHTTP11                = 1<<  7;
     static unsigned constexpr flagNeedEOF               = 1<<  8;
     static unsigned constexpr flagExpectCRLF            = 1<<  9;
@@ -274,9 +276,6 @@ class basic_parser
     std::size_t skip_ = 0;  // search from here
     std::size_t x_;         // scratch variable
     unsigned f_ = 0;        // flags
-
-    unsigned char version_; // LEGACY
-    unsigned short status_; // LEGACY
 
 protected:
     /// Default constructor
@@ -361,10 +360,28 @@ public:
     bool
     need_more() const;
 
+    /** Returns `true` if the message end is indicated by eof.
+
+        This function returns `true` if the semantics of the message
+        require that the end of the message is signaled by an end
+        of file. For example, if the message is a HTTP/1.0 message
+        and the Content-Length is unspecified, the end of the message
+        is indicated by an end of file.
+
+        @note The return value is undefined unless a complete
+        header has been parsed.
+    */
+    bool
+    need_eof() const
+    {
+        BOOST_ASSERT(got_header());
+        return (f_ & flagNeedEOF) != 0;
+    }
+
     /** Returns `true` if the parser is finished with the message.
 
-        The message is finished when the header is parsed and
-        one of the following is true:
+        The message is finished when @ref got_header returns
+        `true` is parsed and one of the following is true:
 
         @li The @ref skip_body option is set
 
@@ -395,29 +412,11 @@ public:
         return result;
     }
 
-    /// Returns `true` if a complete header has been parsed.
+    /// Returns `true` if the complete header has been parsed.
     bool
-    have_header() const
+    got_header() const
     {
-        return (f_ & flagHaveHeader) != 0;
-    }
-
-    /** Returns `true` if the message end is indicated by eof.
-
-        This function returns `true` if the semantics of the message
-        require that the end of the message is signaled by an end
-        of file. For example, if the message is a HTTP/1.0 message
-        and the Content-Length is unspecified, the end of the message
-        is indicated by an end of file.
-
-        @note The return value is undefined unless a complete
-        header has been parsed.
-    */
-    bool
-    needs_eof() const
-    {
-        BOOST_ASSERT(have_header());
-        return (f_ & flagNeedEOF) != 0;
+        return (f_ & flagGotHeader) != 0;
     }
 
     /** Returns `true` if the message is an upgrade message.
@@ -429,16 +428,6 @@ public:
     upgrade() const
     {
         return (f_ & flagConnectionUpgrade) != 0;
-    }
-
-    /** Returns the numeric HTTP Status-Code of a response.
-
-        @return The Status-Code.
-    */
-    unsigned
-    status_code() const
-    {
-        return status_;
     }
 
     /** Returns `true` if keep-alive is specified
@@ -564,7 +553,7 @@ public:
     boost::optional<std::uint64_t>
     content_length() const
     {
-        BOOST_ASSERT(have_header());
+        BOOST_ASSERT(got_header());
         if(! (f_ & flagContentLength))
             return boost::none;
         return len_;
@@ -575,7 +564,7 @@ public:
     std::uint64_t
     remain() const
     {
-        BOOST_ASSERT(have_header());
+        BOOST_ASSERT(got_header());
         if(f_ & (flagContentLength | flagChunked))
             return len_;
         // VFALCO This is ugly
@@ -623,7 +612,7 @@ private:
     bool
     is_chunked() const
     {
-        BOOST_ASSERT(have_header());
+        BOOST_ASSERT(got_header());
         return (f_ & flagChunked) != 0;
     }
 

@@ -64,7 +64,7 @@ public:
 
     /** Returns the parsed header
 
-        Only valid if @ref have_header would return `true`.
+        Only valid if @ref got_header would return `true`.
     */
     value_type const&
     get() const
@@ -74,7 +74,7 @@ public:
 
     /** Returns the parsed header.
 
-        Only valid if @ref have_header would return `true`.
+        Only valid if @ref got_header would return `true`.
     */
     value_type&
     get()
@@ -85,7 +85,7 @@ public:
     /** Returns ownership of the parsed header.
 
         Ownership is transferred to the caller. Only
-        valid if @ref have_header would return `true`.
+        valid if @ref got_header would return `true`.
 
         Requires:
             @ref value_type is @b MoveConstructible

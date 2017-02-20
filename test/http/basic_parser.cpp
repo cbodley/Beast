@@ -275,7 +275,7 @@ public:
             return;
         if(! BEAST_EXPECT(n == s.size()))
             return;
-        if(p.needs_eof())
+        if(p.need_eof())
             p.write_eof(ec);
         if(BEAST_EXPECTS(! ec, ec.message()))
             pred(p);
@@ -817,7 +817,7 @@ public:
                 buf("67890")), ec);
             BEAST_EXPECTS(! ec, ec.message());
             BEAST_EXPECT(p.is_done());
-            BEAST_EXPECT(! p.needs_eof());
+            BEAST_EXPECT(! p.need_eof());
         }
 
         // request without Content-Length or
@@ -830,7 +830,7 @@ public:
                 "\r\n"
                 ), ec);
             BEAST_EXPECTS(! ec, ec.message());
-            BEAST_EXPECT(! p.needs_eof());
+            BEAST_EXPECT(! p.need_eof());
             BEAST_EXPECT(p.is_done());
         }
         {
@@ -841,7 +841,7 @@ public:
                 "\r\n"
                 ), ec);
             BEAST_EXPECTS(! ec, ec.message());
-            BEAST_EXPECT(! p.needs_eof());
+            BEAST_EXPECT(! p.need_eof());
             BEAST_EXPECT(p.is_done());
         }
 
@@ -856,13 +856,13 @@ public:
                 ), ec);
             BEAST_EXPECTS(! ec, ec.message());
             BEAST_EXPECT(! p.is_done());
-            BEAST_EXPECT(p.needs_eof());
+            BEAST_EXPECT(p.need_eof());
             p.write(buf(
                 "hello"
                 ), ec);
             BEAST_EXPECTS(! ec, ec.message());
             BEAST_EXPECT(! p.is_done());
-            BEAST_EXPECT(p.needs_eof());
+            BEAST_EXPECT(p.need_eof());
             p.write_eof(ec);
             BEAST_EXPECTS(! ec, ec.message());
             BEAST_EXPECT(p.is_done());
@@ -877,7 +877,7 @@ public:
                 "\r\n"
                 ), ec);
             BEAST_EXPECTS(! ec, ec.message());
-            BEAST_EXPECT(! p.needs_eof());
+            BEAST_EXPECT(! p.need_eof());
             BEAST_EXPECT(p.is_done());
         }
 
@@ -891,13 +891,13 @@ public:
                 "\r\n"
                 ), ec);
             BEAST_EXPECTS(! ec, ec.message());
-            BEAST_EXPECT(! p.needs_eof());
+            BEAST_EXPECT(! p.need_eof());
             BEAST_EXPECT(! p.is_done());
             p.write(buf(
                 "0\r\n\r\n"
                 ), ec);
             BEAST_EXPECTS(! ec, ec.message());
-            BEAST_EXPECT(! p.needs_eof());
+            BEAST_EXPECT(! p.need_eof());
             BEAST_EXPECT(p.is_done());
         }
 

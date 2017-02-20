@@ -40,8 +40,6 @@ basic_parser(basic_parser<
     , skip_(other.skip_)
     , x_(other.x_)
     , f_(other.f_)
-    , version_(other.version_)
-    , status_(other.status_)
 {
     other.buf_ = nullptr;
 }
@@ -51,7 +49,7 @@ bool
 basic_parser<isRequest, Derived>::
 need_more() const
 {
-    if(! (f_ & flagHaveHeader))
+    if(! (f_ & flagGotHeader))
         return true;
     if(! (f_ & flagHasBody))
         return false;
@@ -67,7 +65,7 @@ bool
 basic_parser<isRequest, Derived>::
 keep_alive() const
 {
-    BOOST_ASSERT(have_header());
+    BOOST_ASSERT(got_header());
     if(f_ & flagHTTP11)
     {
         if(f_ & flagConnectionClose)
@@ -78,7 +76,7 @@ keep_alive() const
         if(! (f_ & flagConnectionKeepAlive))
             return false;
     }
-    return ! needs_eof();
+    return ! need_eof();
 }
 
 template<bool isRequest, class Derived>
@@ -109,7 +107,7 @@ write(boost::asio::const_buffers_1 const& buffer,
         buffer_cast<char const*>(*buffer.begin()),
             buffer_size(*buffer.begin())};
     auto s = s0;
-    if(! have_header())
+    if(! got_header())
     {
         if(! s.empty())
             f_ |= flagGotSome;
@@ -118,7 +116,7 @@ write(boost::asio::const_buffers_1 const& buffer,
         if(n == 0)
             return 0;
         BOOST_ASSERT(! ec);
-        BOOST_ASSERT(have_header());
+        BOOST_ASSERT(got_header());
         s.remove_prefix(n);
     }
     if(is_chunked())
@@ -168,7 +166,7 @@ write_eof(error_code& ec)
         ec = boost::asio::error::eof;
         return;
     }
-    if(! (f_ & flagHaveHeader))
+    if(! (f_ & flagGotHeader))
     {
         ec = error::partial_message;
         return;
@@ -231,8 +229,8 @@ split(bool value)
     {
         if(! (f_ & flagSplitParse))
         {
-            BOOST_ASSERT(! have_header());
-            if(! have_header())
+            BOOST_ASSERT(! got_header());
+            if(! got_header())
                 f_ |= flagSplitParse;
         }
     }
@@ -337,7 +335,6 @@ parse_startline(char const*& it,
         ec = error::bad_version;
         return;
     }
-    version_ = version;
 
     impl().on_request(
         method, path, version, ec);
@@ -364,7 +361,6 @@ parse_startline(char const*& it,
         return;
     }
     ++it;
-    version_ = version;
 
     status = parse_status(it);
     if(status < 0 || *it != ' ')
@@ -373,7 +369,6 @@ parse_startline(char const*& it,
         return;
     }
     ++it;
-    status_ = status;
 
     auto const reason = parse_reason(it);
     if(! parse_crlf(it))
@@ -649,7 +644,7 @@ parse_header(char const* p,
         return 0;
     BOOST_ASSERT(p == term);
 
-    f_ |= flagHaveHeader; // set before on_header
+    f_ |= flagGotHeader; // set before on_header
     do_header(status, std::integral_constant<
         bool, isRequest>{});
     impl().on_header(ec);
