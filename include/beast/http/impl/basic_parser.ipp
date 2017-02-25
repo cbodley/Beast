@@ -865,6 +865,18 @@ parse_chunk(char const* p,
         // to the beginning of the first '\r\n'
         x_ = term - 2 - first;
         skip_ = x_;
+
+        f_ |= flagFinalChunk;
+    }
+    else
+    {
+        // We are parsing the value again
+        // to advance p to the right place.
+        std::uint64_t v;
+        auto const result = parse_hex(p, v);
+        BOOST_ASSERT(result && v == 0);
+        beast::detail::ignore_unused(result);
+        beast::detail::ignore_unused(v);
     }
 
     term = find_eom(
@@ -876,21 +888,6 @@ parse_chunk(char const* p,
         if(n > 3)
             skip_ = (last - first) - 3;
         return 0;
-    }
-        
-    if(f_ & flagFinalChunk)
-    {
-        // We are parsing the value again
-        // to advance p to the right place.
-        std::uint64_t v;
-        auto const result = parse_hex(p, v);
-        BOOST_ASSERT(result && v == 0);
-        beast::detail::ignore_unused(result);
-        beast::detail::ignore_unused(v);
-    }
-    else
-    {
-        f_ |= flagFinalChunk;
     }
 
     if(*p == ';')
