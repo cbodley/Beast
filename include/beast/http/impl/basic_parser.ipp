@@ -241,8 +241,9 @@ write_body(Reader& r,
     auto const b = r.prepare(n, ec);
     if(ec)
         return;
+    BOOST_ASSERT(b);
     auto const len = buffer_copy(
-        b, dynabuf.data(), n);
+        *b, dynabuf.data(), n);
     r.commit(len, ec);
     if(ec)
         return;
