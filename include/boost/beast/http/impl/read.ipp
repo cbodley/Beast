@@ -554,7 +554,8 @@ async_read_some(
     static_assert(is_dynamic_buffer<DynamicBuffer>::value,
         "DynamicBuffer requirements not met");
     BOOST_ASSERT(! parser.is_done());
-    async_completion<ReadHandler, void(error_code)> init{handler};
+    boost::asio::async_completion<ReadHandler,
+        void(error_code, std::size_t)> init{handler};
     detail::read_some_op<AsyncReadStream,
         DynamicBuffer, isRequest, Derived, handler_type<
             ReadHandler, void(error_code, std::size_t)>>{
